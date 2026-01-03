@@ -57,10 +57,7 @@ class GitHubFetcher:
                    (f", min {min_contributors} contributors)" if min_contributors else ")"))
         return result
     
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=60)
-    )
+    # Note: No retry decorator - we handle rate limits by skipping repos gracefully
     def get_contribution_issues(
         self, 
         repo: Repository,
@@ -119,7 +116,13 @@ class GitHubFetcher:
                     issues.append(metadata)
                     
         except GithubException as e:
-            logger.warning(f"Error fetching issues from {repo.full_name}: {e}")
+            # Check if this is a rate limit error (403 Forbidden or 429)
+            if e.status in (403, 429):
+                logger.warning(f"⚠️ RATE LIMITED on {repo.full_name} - skipping repo (got {len(issues)} issues before limit)")
+                # Return whatever we got so far instead of waiting
+                return issues
+            else:
+                logger.warning(f"Error fetching issues from {repo.full_name}: {e}")
             
         logger.info(f"Found {len(issues)} contribution issues in {repo.full_name} (active in last {recent_days} days)")
         return issues
