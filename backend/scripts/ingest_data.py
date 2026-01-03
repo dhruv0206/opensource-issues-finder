@@ -3,6 +3,7 @@
 import sys
 import logging
 import argparse
+import time
 from pathlib import Path
 
 # Add parent directory to path for imports
@@ -145,6 +146,10 @@ def main():
                 total_issues += len(issues)
                 
                 logger.info(f"  Ingested {len(issues)} issues (total: {total_issues})")
+                
+                # Sleep briefly to avoid secondary rate limits (403 Forbidden)
+                # GitHub doesn't like rapid sequential requests to different repos
+                time.sleep(2)
                 
         except Exception as e:
             logger.error(f"Error processing {lang}: {e}")
