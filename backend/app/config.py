@@ -23,7 +23,18 @@ class Settings(BaseSettings):
     embedding_dimension: int = 768
     
     # Ingestion settings
-    default_languages: list[str] = ["Python", "JavaScript", "TypeScript", "Go", "Rust"]
+    default_languages: list[str] = [
+        "Python", 
+        "JavaScript", 
+        "TypeScript", 
+        "Java", 
+        "C#", 
+        "Go", 
+        "Rust", 
+        "C++", 
+        "PHP", 
+        "Ruby"
+    ]
     repos_per_language: int = 100
     contribution_labels: list[str] = [
         # Standard GitHub labels
