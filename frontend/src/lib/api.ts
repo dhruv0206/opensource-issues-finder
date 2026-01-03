@@ -54,17 +54,30 @@ export interface SearchParams {
   query: string;
   limit?: number;
   page?: number;
+  // Manual overrides
+  language?: string | null;
+  labels?: string[] | null;
+  sort_by?: 'relevance' | 'stars' | 'recency' | null;
+  days_ago?: number | null;
 }
 
 export async function searchIssues(params: SearchParams): Promise<SearchResponse> {
-  const { query, limit = 20, page = 1 } = params;
+  const { query, limit = 20, page = 1, language, labels, sort_by, days_ago } = params;
   
   const response = await fetch(`${API_BASE_URL}/api/search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ query, limit, page }),
+    body: JSON.stringify({ 
+      query, 
+      limit, 
+      page,
+      language,
+      labels,
+      sort_by,
+      days_ago
+    }),
   });
 
   if (!response.ok) {

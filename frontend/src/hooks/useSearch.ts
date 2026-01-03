@@ -14,6 +14,14 @@ interface PaginationState {
   hasPrev: boolean;
 }
 
+// Search options passed from UI
+export interface SearchOptions {
+  language?: string | null;
+  labels?: string[] | null;
+  sortBy?: "relevance" | "stars" | "recency" | null;
+  daysAgo?: number | null;
+}
+
 interface UseSearchReturn {
   results: SearchResult[];
   parsedQuery: ParsedQuery | null;
@@ -21,7 +29,7 @@ interface UseSearchReturn {
   error: string | null;
   pagination: PaginationState | null;
   currentQuery: string;
-  search: (query: string) => Promise<void>;
+  search: (query: string, options?: SearchOptions) => Promise<void>;
   goToPage: (page: number) => void;
   clearResults: () => void;
 }
@@ -60,8 +68,9 @@ export function useSearch(): UseSearchReturn {
     return allResults.slice(startIdx, endIdx);
   }, [allResults, currentPage]);
 
-  const search = useCallback(async (query: string) => {
-    if (!query.trim()) {
+  const search = useCallback(async (query: string, options?: SearchOptions) => {
+    // If no query and no filters, just clear
+    if (!query.trim() && !options) {
       setAllResults([]);
       setParsedQuery(null);
       setCurrentQuery('');
@@ -76,7 +85,15 @@ export function useSearch(): UseSearchReturn {
 
     try {
       // Fetch more results, paginate locally
-      const response: SearchResponse = await searchIssues({ query, page: 1, limit: FETCH_LIMIT });
+      const response: SearchResponse = await searchIssues({ 
+        query, 
+        page: 1, 
+        limit: FETCH_LIMIT,
+        language: options?.language,
+        labels: options?.labels,
+        sort_by: options?.sortBy,
+        days_ago: options?.daysAgo
+      });
       setAllResults(response.results);
       setParsedQuery(response.parsed_query);
     } catch (err) {

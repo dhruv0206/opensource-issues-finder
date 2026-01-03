@@ -10,6 +10,12 @@ class SearchQuery(BaseModel):
     query: str
     limit: int = 20
     page: int = 1  # Current page (1-indexed)
+    
+    # Optional Manual Filters (Override AI detection)
+    language: str | None = None
+    labels: list[str] | None = None
+    sort_by: Literal["stars", "recency", "relevance"] | None = None
+    days_ago: int | None = None
 
 
 class ParsedQuery(BaseModel):

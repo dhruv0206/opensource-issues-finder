@@ -35,6 +35,22 @@ class SearchEngine:
         parsed = self.query_parser.parse(query.query)
         logger.info(f"Parsed query: {parsed}")
         
+        # Override with manual filters if provided
+        if query.language:
+            # "All" usually means no filter, handled by frontend passing None or specific check here
+            parsed.language = query.language if query.language.lower() != "all" else None
+            
+        if query.labels:
+            parsed.labels = query.labels
+            
+        if query.sort_by:
+            parsed.sort_by = query.sort_by
+            
+        if query.days_ago:
+            parsed.days_ago = query.days_ago
+            
+        logger.info(f"Final query config (after manual overrides): {parsed}")
+        
         # 2. Generate query embedding
         query_embedding = self.embedder.generate_query_embedding(
             parsed.semantic_query

@@ -13,9 +13,20 @@ import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 const ITEMS_PER_PAGE = 10;
 
+import { FilterBar } from '@/components/FilterBar';
+
+// ... imports
+
 export default function Home() {
-  const { results, parsedQuery, isLoading, error, pagination, search, goToPage, clearResults } = useSearch();
+  const { results, parsedQuery, isLoading, error, pagination, search, goToPage, clearResults, currentQuery } = useSearch();
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Filter State
+  const [language, setLanguage] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"relevance" | "stars" | "recency">("relevance");
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
+  const [daysAgo, setDaysAgo] = useState<number | null>(null);
+
   const [allRecentIssues, setAllRecentIssues] = useState<SearchResult[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
   const [recentPage, setRecentPage] = useState(1);
@@ -34,6 +45,29 @@ export default function Home() {
     }
     loadRecent();
   }, []);
+
+  // Sync UI state with AI-parsed query
+  useEffect(() => {
+    if (parsedQuery) {
+      // Sync Language
+      if (parsedQuery.language) setLanguage(parsedQuery.language);
+
+      // Sync Sort
+      if (parsedQuery.sort_by) setSortBy(parsedQuery.sort_by);
+
+      // Sync Time
+      if (parsedQuery.days_ago) setDaysAgo(parsedQuery.days_ago);
+
+      // Sync Labels (simple match for now)
+      if (parsedQuery.labels && parsedQuery.labels.length > 0) {
+        // Check if any of the parsed labels match our predefined labels
+        // This is a basic heuristic since dropdown is single-select
+        const knownLabels = ["good first issue", "help wanted", "documentation", "enhancement", "bug", "beginner"];
+        const matched = parsedQuery.labels.find(l => knownLabels.includes(l.toLowerCase()));
+        if (matched) setSelectedLabel(matched);
+      }
+    }
+  }, [parsedQuery]);
 
   // Paginate recent issues locally
   const recentPagination = useMemo(() => {
@@ -57,14 +91,79 @@ export default function Home() {
   }, [allRecentIssues, recentPage]);
 
   const handleSearch = async (query: string) => {
+    // Reset filters on new search
+    setLanguage(null);
+    setSortBy("relevance");
+    setSelectedLabel(null);
+    setDaysAgo(null);
     setHasSearched(true);
-    await search(query);
+
+    // Perform search with default/empty filters
+    await search(query, {
+      language: null,
+      sortBy: "relevance",
+      labels: undefined,
+      daysAgo: null
+    });
+  };
+
+  // Filter Handlers
+  const handleLanguageChange = (lang: string | null) => {
+    setLanguage(lang);
+    if (hasSearched) {
+      search(currentQuery, {
+        language: lang,
+        sortBy,
+        labels: selectedLabel ? [selectedLabel] : undefined,
+        daysAgo
+      });
+    }
+  };
+
+  const handleSortChange = (sort: "relevance" | "stars" | "recency") => {
+    setSortBy(sort);
+    if (hasSearched) {
+      search(currentQuery, {
+        language,
+        sortBy: sort,
+        labels: selectedLabel ? [selectedLabel] : undefined,
+        daysAgo
+      });
+    }
+  };
+
+  const handleLabelChange = (label: string | null) => {
+    setSelectedLabel(label);
+    if (hasSearched) {
+      search(currentQuery, {
+        language,
+        sortBy,
+        labels: label ? [label] : undefined,
+        daysAgo
+      });
+    }
+  };
+
+  const handleTimeChange = (days: number | null) => {
+    setDaysAgo(days);
+    if (hasSearched) {
+      search(currentQuery, {
+        language,
+        sortBy,
+        labels: selectedLabel ? [selectedLabel] : undefined,
+        daysAgo: days
+      });
+    }
   };
 
   const handleClear = () => {
     clearResults();
     setHasSearched(false);
     setRecentPage(1);
+    // Optional: Reset filters on clear?
+    // setLanguage(null);
+    // setSortBy("relevance");
+    // setSelectedLabel(null);
   };
 
   const handleRecentPageChange = (page: number) => {
@@ -99,24 +198,31 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="pt-24 pb-8 px-4">
-        <div className="max-w-4xl mx-auto text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Find Your Next{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 to-neutral-600">
-              Open Source Contribution
-            </span>
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Use natural language to discover beginner-friendly issues, help wanted requests,
-            and contribution opportunities across GitHub&apos;s most popular repositories.
-          </p>
-        </div>
+        {/* ... title ... */}
 
         {/* Search */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+        <div className="max-w-4xl mx-auto mb-8 flex flex-col items-center">
+          <div className="w-full mb-6">
+            <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+          </div>
+
+          <div className="w-full h-px bg-border/50 mb-6" />
+
+          <div className="w-full flex justify-center">
+            <FilterBar
+              language={language}
+              sortBy={sortBy}
+              selectedLabel={selectedLabel}
+              daysAgo={daysAgo}
+              onLanguageChange={handleLanguageChange}
+              onSortChange={handleSortChange}
+              onLabelChange={handleLabelChange}
+              onTimeChange={handleTimeChange}
+            />
+          </div>
         </div>
       </section>
+
 
       {/* Results Section */}
       <section className="px-4 pb-16">
