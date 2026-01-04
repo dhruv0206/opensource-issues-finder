@@ -79,42 +79,36 @@ PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=github-contributions
 ```
 
-### 3. Ingest Data
+### 3. Ingest Data (GitHub App + GraphQL 🚀)
+
+The new GraphQL-based ingestion is 10-20x faster than REST and uses a GitHub App for higher rate limits.
 
 ```bash
-# Basic ingestion (fast, ~5 min)
-python -m scripts.ingest_data --repos-per-language 10
-
-# Full ingestion with filters
-python -m scripts.ingest_data \
-  --repos-per-language 20 \
-  --min-stars 1000 \
-  --recent-days 30
+# Efficient ingestion (Auto-detects active issues)
+python -m scripts.ingest_graphql --min-stars 200 --recent-hours 24
 ```
 
-**Ingestion Options:**
+**Common Flags:**
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--repos-per-language` | 10 | Repos to fetch per language |
-| `--min-stars` | 100 | Minimum repo stars |
-| `--min-contributors` | - | Minimum contributors (optional) |
-| `--recent-days` | 90 | Issues updated within N days |
-| `--clear` | false | Clear index before ingesting |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--min-stars` | 200 | Minimum repo stars (0 for catch-all) |
+| `--recent-hours` | - | Fetch issues updated in last N hours |
+| `--recent-days` | - | Fetch issues updated in last N days |
+| `--max-issues` | 100 | Max issues to ingest per language |
+| `--any-label` | - | If set, ignores label filters (fetches everything) |
 
-## 📋 Ingestion Modes
+## ⏱️ Ingestion Schedule
 
-Use different combinations for different use cases:
+The system runs a **Tiered Ingestion Strategy** via GitHub Actions to balance freshness vs. quality.
 
-| Mode | Command | Best For |
-|------|---------|----------|
-| **Quick Test** | `python -m scripts.ingest_data --repos-per-language 5` | Testing setup (~2 min) |
-| **Standard** | `python -m scripts.ingest_data --repos-per-language 20 --min-stars 500` | Daily use (~15 min) |
-| **Popular Only** | `python -m scripts.ingest_data --repos-per-language 30 --min-stars 5000` | Top-tier repos only |
-| **Fresh Issues** | `python -m scripts.ingest_data --repos-per-language 20 --recent-days 7` | Issues from last week |
-| **Today's Issues** | `python -m scripts.ingest_data --repos-per-language 50 --recent-days 1` | Daily fresh batch |
-| **Full Dataset** | `python -m scripts.ingest_data --repos-per-language 100 --min-stars 100 --recent-days 90` | Comprehensive (~2 hrs) |
-| **Fresh Start** | `python -m scripts.ingest_data --repos-per-language 20 --clear` | Wipe & re-ingest |
+| Frequency | Star Filter | Time Window | Purpose |
+| :--- | :--- | :--- | :--- |
+| **⚡ Every 2 Hours** | **0+** (Catch All) | Last 2.5 Hours | Catch fast-moving & new issues (Velocity) |
+| **🌙 Nightly (4 AM)** | **100+** | Last 7 Days | Deep refresh of established content (Quality) |
+| **☀️ Daily (6 AM)** | **100+** | Last 24 Hours | Complete "Daily Digest" gap-fill |
+| **🌟 Popular** | **5000+** | Recent | High-visibility issues from top repos |
+
 
 ## 🎯 Search Modes
 
@@ -184,7 +178,7 @@ github-contributions-search/
 │   │   └── routes/
 │   │       └── search.py        # API endpoints
 │   └── scripts/
-│       └── ingest_data.py       # Data ingestion CLI
+│       └── ingest_graphql.py    # Data ingestion CLI (GraphQL)
 │
 └── frontend/
     └── src/

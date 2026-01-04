@@ -23,7 +23,7 @@ export default function Home() {
 
   // Filter State
   const [language, setLanguage] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"relevance" | "stars" | "recency">("relevance");
+  const [sortBy, setSortBy] = useState<"relevance" | "stars" | "recency">("recency");
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [daysAgo, setDaysAgo] = useState<number | null>(null);
 
@@ -101,7 +101,7 @@ export default function Home() {
     // Perform search with default/empty filters
     await search(query, {
       language: null,
-      sortBy: "relevance",
+      sortBy: "recency",
       labels: undefined,
       daysAgo: null
     });

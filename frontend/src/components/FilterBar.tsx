@@ -41,6 +41,7 @@ const LABELS = [
 ];
 
 const TIME_FILTERS = [
+    { label: "Last 2 Hours", value: 0.08333 },
     { label: "Last 24 Hours", value: 1 },
     { label: "Last 3 Days", value: 3 },
     { label: "Last 7 Days", value: 7 },

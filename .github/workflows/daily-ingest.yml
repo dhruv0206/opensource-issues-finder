@@ -1,33 +1,28 @@
-name: Daily Data Ingestion
+name: Data Ingestion (GraphQL)
 
 on:
   schedule:
-    # Staggered schedules to avoid rate limits
-    - cron: '0 6 * * *'   # 6 AM UTC - Popular repos
-    - cron: '0 12 * * *'  # 12 PM UTC - Fresh issues
-    - cron: '0 18 * * *'  # 6 PM UTC - Today's issues
+    # Every 2 hours: fetch last 2 hours of issues
+    - cron: '0 */2 * * *'
+    # Nightly at 6 AM UTC: full refresh
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       mode:
         description: 'Which ingestion mode to run?'
         required: true
-        default: '🌟 Popular Repos (5000+ stars)'
+        default: '📅 Fresh Issues (last 7 days)'
         type: choice
         options:
-          - '🌟 Popular Repos (5000+ stars)'
-          - '📅 Fresh Issues (last 7 days)'
+          - '⚡ Last 2 Hours'
           - '🔥 Todays Issues (last 24 hours)'
-          - '🚀 Run All Three'
+          - '📅 Fresh Issues (last 7 days)'
+          - '🌟 Popular (5000+ stars)'
+          - '🚀 All Labels'
 
 jobs:
-  # Job 1: Popular Repos (runs at 6 AM UTC or manually)
-  popular-repos:
+  ingest:
     runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' && 
-      (contains(github.event.inputs.mode, 'Popular') || contains(github.event.inputs.mode, 'All Three')) ||
-      github.event.schedule == '0 6 * * *'
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,85 +37,159 @@ jobs:
         working-directory: ./backend
         run: pip install -r requirements.txt
 
-      - name: "Ingest: Popular Repos (5000+ stars)"
+      # ============ SCHEDULED RUNS ============
+
+      # 1. Nightly Phase 1 (4 AM UTC): Fresh (7d) + Popular
+      - name: "Scheduled: Fresh & Popular (4 AM)"
+        if: github.event_name == 'schedule' && github.event.schedule == '0 4 * * *'
         working-directory: ./backend
         env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
         run: |
-          echo "🌟 Fetching popular repos (5000+ stars)..."
-          python -m scripts.ingest_data \
-            --repos-per-language 10 \
-            --min-stars 5000
+          echo "📅 Fetching Fresh Issues (7 days)..."
+          python -m scripts.ingest_graphql \
+            --min-stars 100 \
+            --max-issues 500 \
+            --recent-days 7 \
+            --any-label
 
-  # Job 2: Fresh Issues (runs at 12 PM UTC or manually)
-  fresh-issues:
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' && 
-      (contains(github.event.inputs.mode, 'Fresh') || contains(github.event.inputs.mode, 'All Three')) ||
-      github.event.schedule == '0 12 * * *'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+          echo "🌟 Fetching Popular Repos (5000+ stars)..."
+          python -m scripts.ingest_graphql \
+            --min-stars 5000 \
+            --max-issues 300 \
+            --any-label
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: pip install -r requirements.txt
-
-      - name: "Ingest: Fresh Issues (last 7 days)"
+      # 2. Nightly Phase 2 (6 AM UTC): Today's Issues (24h)
+      - name: "Scheduled: Today's Issues (6 AM)"
+        if: github.event_name == 'schedule' && github.event.schedule == '0 6 * * *'
         working-directory: ./backend
         env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: |
+          echo "🔥 Fetching Today's Issues (24h)..."
+          python -m scripts.ingest_graphql \
+            --min-stars 100 \
+            --max-issues 400 \
+            --recent-hours 24 \
+            --any-label
+
+      # 3. Daily Cycles (Every 2h): Recent Issues (2.5h)
+      # Runs at 00, 02, 08, 10, ... 22 (Skipping 04, 06 handled above)
+      - name: "Scheduled: Recent Issues (2.5h)"
+        if: github.event_name == 'schedule' && github.event.schedule != '0 4 * * *' && github.event.schedule != '0 6 * * *'
+        working-directory: ./backend
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: |
+          echo "⚡ Fetching issues updated in last 2.5 hours..."
+          python -m scripts.ingest_graphql \
+            --min-stars 0 \
+            --max-issues 200 \
+            --recent-hours 2.5 \
+            --any-label
+
+      # ============ MANUAL RUNS ============
+
+      - name: "Manual: Last 2 Hours"
+        if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.mode, 'Last 2 Hours')
+        working-directory: ./backend
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: |
+          echo "⚡ Fetching issues updated in last 2 hours..."
+          python -m scripts.ingest_graphql \
+            --min-stars 0 \
+            --max-issues 200 \
+            --recent-hours 2 \
+            --any-label
+
+      - name: "Manual: Today's Issues"
+        if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.mode, 'Todays')
+        working-directory: ./backend
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: |
+          echo "🔥 Fetching today's issues..."
+          python -m scripts.ingest_graphql \
+            --min-stars 100 \
+            --max-issues 300 \
+            --recent-days 1 \
+            --any-label
+
+      - name: "Manual: Fresh Issues (7 days)"
+        if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.mode, 'Fresh')
+        working-directory: ./backend
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
         run: |
           echo "📅 Fetching fresh issues (last 7 days)..."
-          python -m scripts.ingest_data \
-            --repos-per-language 15 \
-            --recent-days 7
+          python -m scripts.ingest_graphql \
+            --min-stars 100 \
+            --max-issues 400 \
+            --recent-days 7 \
+            --any-label
 
-  # Job 3: Today's Issues (runs at 6 PM UTC or manually)
-  todays-issues:
-    runs-on: ubuntu-latest
-    if: >
-      github.event_name == 'workflow_dispatch' && 
-      (contains(github.event.inputs.mode, 'Todays') || contains(github.event.inputs.mode, 'All Three')) ||
-      github.event.schedule == '0 18 * * *'
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        working-directory: ./backend
-        run: pip install -r requirements.txt
-
-      - name: "Ingest: Today's Issues (last 24 hours)"
+      - name: "Manual: Popular (5000+ stars)"
+        if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.mode, 'Popular')
         working-directory: ./backend
         env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
         run: |
-          echo "🔥 Fetching today's issues (last 24 hours)..."
-          python -m scripts.ingest_data \
-            --repos-per-language 30 \
-            --recent-days 1
+          echo "🌟 Fetching popular repos (5000+ stars)..."
+          python -m scripts.ingest_graphql \
+            --min-stars 5000 \
+            --max-issues 300 \
+            --any-label
+
+      - name: "Manual: All Labels"
+        if: github.event_name == 'workflow_dispatch' && contains(github.event.inputs.mode, 'All Labels')
+        working-directory: ./backend
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_PRIVATE_KEY: ${{ secrets.GH_PRIVATE_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+        run: |
+          echo "🚀 Full refresh with ANY labels..."
+          python -m scripts.ingest_graphql \
+            --min-stars 100 \
+            --max-issues 500 \
+            --recent-days 7 \
+            --any-label
