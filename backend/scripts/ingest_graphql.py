@@ -108,7 +108,6 @@ def main():
     logger.info(f"GraphQL rate limit: {rate_limit}")
     
     total_issues = 0
-    errors = []  # Track errors for proper exit code
     
     for lang in languages:
         logger.info(f"\n{'='*50}")
@@ -163,12 +162,9 @@ def main():
                 if "rate limit" in str(e).lower():
                     logger.warning(f"⛔ Rate limit hit - stopping")
                     logger.info(f"Total issues ingested: {total_issues}")
-                    # Update stats even on rate limit (partial success)
-                    _update_ingestion_stats(pinecone, total_issues)
-                    sys.exit(0)  # Rate limit is not a failure
+                    sys.exit(0)
                 else:
                     logger.error(f"  Error fetching {lang}/{label}: {e}")
-                    errors.append(f"{lang}/{label}: {e}")
     
     logger.info(f"\n{'='*50}")
     logger.info(f"Ingestion complete! Total issues: {total_issues}")
@@ -177,43 +173,7 @@ def main():
     # Final rate limit check
     rate_limit = fetcher.get_rate_limit_status()
     logger.info(f"Final rate limit: {rate_limit}")
-    
-    # Update ingestion stats in Pinecone (regardless of errors)
-    _update_ingestion_stats(pinecone, total_issues)
-    
-    # Exit with error if any errors occurred
-    if errors:
-        logger.error(f"\n⚠️ {len(errors)} errors occurred during ingestion:")
-        for err in errors:
-            logger.error(f"  - {err}")
-        sys.exit(1)  # Exit with error code for GitHub Actions
-
-
-def _update_ingestion_stats(pinecone, total_issues: int):
-    """Update the ingestion stats record in Pinecone."""
-    import time
-    
-    stats_id = "__ingestion_stats__"
-    now_ts = int(time.time())
-    
-    try:
-        # Upsert a stats vector with metadata
-        pinecone.index.upsert(
-            vectors=[{
-                "id": stats_id,
-                "values": [1.0] + [0.0] * 767,  # Non-zero vector (Pinecone requires non-zero)
-                "metadata": {
-                    "last_run_at": now_ts,
-                    "total_issues_ingested": total_issues,
-                    "type": "stats"
-                }
-            }]
-        )
-        logger.info(f"📊 Updated ingestion stats: last_run_at={now_ts}, issues={total_issues}")
-    except Exception as e:
-        logger.warning(f"Failed to update ingestion stats: {e}")
 
 
 if __name__ == "__main__":
     main()
-

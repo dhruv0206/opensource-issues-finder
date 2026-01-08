@@ -57,8 +57,8 @@ async def search(query: SearchQuery) -> dict:
 async def get_recent_issues(
     limit: int = 20, 
     sort_by: str = "newest",
-    languages: str | None = None,
-    labels: str | None = None,
+    language: str | None = None,
+    label: str | None = None,
     days_ago: int | None = None
 ) -> dict:
     """
@@ -71,22 +71,19 @@ async def get_recent_issues(
             - "recently_discussed" (recently updated/commented)
             - "relevance" (combined score)
             - "stars" (popularity)
-        languages: Comma-separated languages (e.g., "Python,JavaScript,TypeScript")
-        labels: Comma-separated labels (e.g., "good first issue,help wanted")
+        language: Filter by programming language (e.g., "Python", "JavaScript")
+        label: Filter by issue label (e.g., "good first issue", "help wanted")
         days_ago: Filter by issues updated within N days
     
     Returns issues from the last 30 days (or 24h for "newest" sort).
     """
     try:
-        # Parse comma-separated values into lists
-        language_list = [l.strip() for l in languages.split(",")] if languages else None
-        label_list = [l.strip() for l in labels.split(",")] if labels else None
-        
+        labels = [label] if label else None
         results = search_engine.get_recent_issues(
             limit=limit, 
             sort_by=sort_by,
-            languages=language_list,
-            labels=label_list,
+            language=language,
+            labels=labels,
             days_ago=days_ago
         )
         
@@ -102,32 +99,34 @@ async def get_recent_issues(
 
 @router.get("/last-updated")
 async def get_last_updated() -> dict:
-    """Get the timestamp of the last successful ingestion run."""
+    """Get the timestamp of the most recently ingested issue."""
     try:
         from datetime import datetime
         
-        # Fetch the stats record by ID
-        stats_id = "__ingestion_stats__"
-        result = search_engine.pinecone.index.fetch(ids=[stats_id])
+        # Query multiple results and find the max ingested_at
+        # (Pinecone doesn't support sorting by metadata)
+        results = search_engine.pinecone.index.query(
+            vector=[0.0] * 768,  # Dummy vector
+            top_k=100,  # Get many to find the newest
+            include_metadata=True,
+            filter={"ingested_at": {"$gt": 0}}
+        )
         
-        if result.vectors and stats_id in result.vectors:
-            metadata = result.vectors[stats_id].metadata
-            last_run_at = metadata.get("last_run_at", 0)
-            total_issues = metadata.get("total_issues_ingested", 0)
-            
-            if last_run_at > 0:
-                dt = datetime.fromtimestamp(last_run_at)
+        if results.matches:
+            # Find max ingested_at
+            max_ts = max(m.metadata.get("ingested_at", 0) for m in results.matches)
+            if max_ts > 0:
+                dt = datetime.fromtimestamp(max_ts)
                 return {
                     "last_updated": dt.isoformat(),
-                    "timestamp": last_run_at,
-                    "total_issues": total_issues
+                    "timestamp": max_ts
                 }
         
-        return {"last_updated": None, "timestamp": None, "total_issues": 0}
+        return {"last_updated": None, "timestamp": None}
         
     except Exception as e:
-        logger.error(f"Error getting last updated: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Last updated error: {e}")
+        return {"last_updated": None, "error": str(e)}
 
 
 @router.get("/health")

@@ -1,12 +1,4 @@
 name: Data Ingestion (GraphQL)
-run-name: >-
-  ${{ 
-    github.event_name == 'workflow_dispatch' && format('Manual: {0}', github.event.inputs.mode) || 
-    github.event.schedule == '0 2 * * *' && 'Scheduled: 🧹 Cleanup (2 AM)' || 
-    github.event.schedule == '0 4 * * *' && 'Scheduled: 📅 Fresh & Popular (4 AM)' || 
-    github.event.schedule == '0 6 * * *' && 'Scheduled: 🔥 Today''s Issues (6 AM)' || 
-    'Scheduled: ⚡ Last 2 Hours (Recurring)' 
-  }}
 
 on:
   schedule:
