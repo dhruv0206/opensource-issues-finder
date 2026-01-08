@@ -101,3 +101,80 @@ class PineconeClient:
         """Delete all vectors from the index."""
         self.index.delete(delete_all=True)
         logger.info("Deleted all vectors from index")
+    
+    def list_all_ids(self, batch_size: int = 100) -> list[str]:
+        """
+        List all vector IDs in the index using pagination.
+        
+        The Pinecone SDK's list() method returns a generator that automatically
+        handles pagination internally.
+        
+        Args:
+            batch_size: Number of IDs to fetch per page
+            
+        Returns:
+            List of all vector IDs in the index
+        """
+        all_ids = []
+        
+        # The list() method returns a generator that yields pages of IDs
+        # Each iteration returns a list of IDs
+        try:
+            for ids_batch in self.index.list(limit=batch_size):
+                # ids_batch is a list of IDs
+                all_ids.extend(ids_batch)
+                
+                if len(all_ids) % 5000 == 0:
+                    logger.info(f"Listed {len(all_ids)} IDs so far...")
+        except Exception as e:
+            logger.error(f"Error listing IDs: {e}")
+            # Fallback: try to get IDs by querying with a dummy vector
+            logger.info("Falling back to query-based ID extraction...")
+            return self._list_ids_via_query()
+        
+        logger.info(f"Total IDs in index: {len(all_ids)}")
+        return all_ids
+    
+    def _list_ids_via_query(self) -> list[str]:
+        """
+        Fallback method to list IDs by querying with a dummy vector.
+        Less efficient but works on all index types.
+        """
+        dummy_vector = [0.0] * self.dimension
+        
+        # Query for a large number of results
+        results = self.index.query(
+            vector=dummy_vector,
+            top_k=10000,
+            include_metadata=False
+        )
+        
+        ids = [match["id"] for match in results.get("matches", [])]
+        logger.info(f"Found {len(ids)} IDs via query fallback")
+        return ids
+    
+    def delete_by_ids(self, ids: list[str], batch_size: int = 100) -> int:
+        """
+        Delete vectors by their IDs.
+        
+        Args:
+            ids: List of vector IDs to delete
+            batch_size: Number of IDs to delete per batch
+            
+        Returns:
+            Number of IDs deleted
+        """
+        deleted_count = 0
+        
+        for i in range(0, len(ids), batch_size):
+            batch = ids[i:i + batch_size]
+            try:
+                self.index.delete(ids=batch)
+                deleted_count += len(batch)
+                if deleted_count % 500 == 0:
+                    logger.info(f"Deleted {deleted_count} IDs so far...")
+            except Exception as e:
+                logger.error(f"Error deleting batch: {e}")
+        
+        logger.info(f"Total deleted: {deleted_count}")
+        return deleted_count

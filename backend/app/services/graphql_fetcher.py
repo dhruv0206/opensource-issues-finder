@@ -75,6 +75,38 @@ query SearchIssues($query: String!, $cursor: String) {
           }
         }
       }
+"""
+
+# GraphQL query for batch checking issue states by repo and number
+# This is more efficient than individual REST calls
+BATCH_CHECK_ISSUES_QUERY = """
+query BatchCheckIssues($owner: String!, $name: String!, $numbers: [Int!]!) {
+  rateLimit {
+    remaining
+    resetAt
+  }
+  repository(owner: $owner, name: $name) {
+    issues(first: 100, filterBy: {}) {
+      nodes {
+        number
+        state
+      }
+    }
+  }
+}
+"""
+
+# Simple query to check a single issue state
+CHECK_ISSUE_STATE_QUERY = """
+query CheckIssue($owner: String!, $name: String!, $number: Int!) {
+  rateLimit {
+    remaining
+    resetAt
+  }
+  repository(owner: $owner, name: $name) {
+    issue(number: $number) {
+      number
+      state
     }
   }
 }
@@ -196,8 +228,8 @@ class GraphQLFetcher:
         
         raise ValueError("No GitHub authentication available")
     
-    def _execute_query(self, query: str, variables: dict) -> dict:
-        """Execute a GraphQL query."""
+    def _execute_query(self, query: str, variables: dict, retry_on_401: bool = True) -> dict:
+        """Execute a GraphQL query with automatic token refresh on 401."""
         token = self._get_auth_token()
         
         response = requests.post(
@@ -208,6 +240,15 @@ class GraphQLFetcher:
                 "Content-Type": "application/json"
             }
         )
+        
+        # Handle 401 Unauthorized - token may have expired
+        if response.status_code == 401 and retry_on_401:
+            logger.warning("Got 401 Unauthorized, refreshing token and retrying...")
+            # Invalidate cached token
+            self._installation_token = None
+            self._token_expires_at = None
+            # Retry once with fresh token
+            return self._execute_query(query, variables, retry_on_401=False)
         
         if response.status_code == 403:
             logger.error("Rate limited by GitHub")
@@ -220,9 +261,9 @@ class GraphQLFetcher:
             logger.error(f"GraphQL errors: {result['errors']}")
             raise Exception(f"GraphQL error: {result['errors']}")
         
-        # Log rate limit info
+        # Log rate limit info (less frequently to reduce noise)
         rate_limit = result.get("data", {}).get("rateLimit", {})
-        if rate_limit:
+        if rate_limit and rate_limit.get("remaining", 5000) % 500 == 0:
             logger.info(f"GraphQL rate limit remaining: {rate_limit.get('remaining')}")
         
         return result
@@ -424,3 +465,125 @@ class GraphQLFetcher:
         
         logger.info(f"Found {len(closed_issues)} closed issues in last {hours} hours")
         return closed_issues
+    
+    def batch_check_issue_states(self, issue_ids: list[str]) -> dict[str, str]:
+        """
+        Check the current state of multiple issues efficiently using batched GraphQL queries.
+        
+        This method builds dynamic GraphQL queries to check up to 50 issues per repository
+        in a single API call, dramatically reducing the number of API calls needed.
+        
+        Issue IDs should be in format "owner/repo#number" (e.g., "freeCodeCamp/freeCodeCamp#65018")
+        
+        Args:
+            issue_ids: List of issue IDs to check
+            
+        Returns:
+            Dict mapping issue_id -> state ("OPEN", "CLOSED", or "NOT_FOUND")
+        """
+        # Group issues by repository for efficient batching
+        repo_issues: dict[str, list[int]] = {}
+        
+        for issue_id in issue_ids:
+            try:
+                # Parse "owner/repo#number" format
+                repo_part, number_part = issue_id.rsplit("#", 1)
+                number = int(number_part)
+                
+                if repo_part not in repo_issues:
+                    repo_issues[repo_part] = []
+                repo_issues[repo_part].append(number)
+            except (ValueError, IndexError) as e:
+                logger.warning(f"Invalid issue ID format: {issue_id} - {e}")
+        
+        logger.info(f"Checking {len(issue_ids)} issues across {len(repo_issues)} repositories")
+        
+        results = {}
+        repos_checked = 0
+        
+        for repo_full_name, numbers in repo_issues.items():
+            try:
+                owner, name = repo_full_name.split("/", 1)
+            except ValueError:
+                logger.warning(f"Invalid repo format: {repo_full_name}")
+                continue
+            
+            # Process issues in batches of 50 per repo (GraphQL query size limit)
+            batch_size = 50
+            for i in range(0, len(numbers), batch_size):
+                batch_numbers = numbers[i:i + batch_size]
+                
+                try:
+                    # Build dynamic GraphQL query for multiple issues
+                    issue_states = self._batch_check_repo_issues(owner, name, batch_numbers)
+                    
+                    # Map results back to full issue IDs
+                    for number in batch_numbers:
+                        issue_id = f"{repo_full_name}#{number}"
+                        results[issue_id] = issue_states.get(number, "NOT_FOUND")
+                        
+                except Exception as e:
+                    logger.warning(f"Error checking issues for {repo_full_name}: {e}")
+                    # Mark all issues in this batch as error
+                    for number in batch_numbers:
+                        results[f"{repo_full_name}#{number}"] = "ERROR"
+            
+            repos_checked += 1
+            if repos_checked % 100 == 0:
+                logger.info(f"Checked {repos_checked}/{len(repo_issues)} repositories ({len(results)} issues)...")
+        
+        # Count states
+        state_counts = {}
+        for state in results.values():
+            state_counts[state] = state_counts.get(state, 0) + 1
+        logger.info(f"Issue state check complete: {state_counts}")
+        
+        return results
+    
+    def _batch_check_repo_issues(self, owner: str, name: str, numbers: list[int]) -> dict[int, str]:
+        """
+        Check multiple issues from the same repository in a single GraphQL query.
+        
+        Uses dynamic query building to check up to 50 issues at once.
+        
+        Args:
+            owner: Repository owner
+            name: Repository name
+            numbers: List of issue numbers to check
+            
+        Returns:
+            Dict mapping issue_number -> state
+        """
+        # Build dynamic GraphQL query with aliases for each issue
+        issue_queries = []
+        for idx, number in enumerate(numbers):
+            issue_queries.append(f'issue{idx}: issue(number: {number}) {{ number state }}')
+        
+        query = f"""
+        query BatchCheckRepoIssues {{
+          rateLimit {{
+            remaining
+            resetAt
+          }}
+          repository(owner: "{owner}", name: "{name}") {{
+            {chr(10).join(issue_queries)}
+          }}
+        }}
+        """
+        
+        result = self._execute_query(query, {})
+        
+        # Parse results
+        repo_data = result.get("data", {}).get("repository", {})
+        issue_states = {}
+        
+        for idx, number in enumerate(numbers):
+            issue_data = repo_data.get(f"issue{idx}")
+            if issue_data:
+                issue_states[number] = issue_data.get("state", "UNKNOWN")
+            else:
+                issue_states[number] = "NOT_FOUND"
+        
+        return issue_states
+
+
