@@ -57,8 +57,8 @@ async def search(query: SearchQuery) -> dict:
 async def get_recent_issues(
     limit: int = 20, 
     sort_by: str = "newest",
-    language: str | None = None,
-    label: str | None = None,
+    languages: str | None = None,
+    labels: str | None = None,
     days_ago: int | None = None
 ) -> dict:
     """
@@ -71,19 +71,22 @@ async def get_recent_issues(
             - "recently_discussed" (recently updated/commented)
             - "relevance" (combined score)
             - "stars" (popularity)
-        language: Filter by programming language (e.g., "Python", "JavaScript")
-        label: Filter by issue label (e.g., "good first issue", "help wanted")
+        languages: Comma-separated list of languages (e.g., "Python,JavaScript")
+        labels: Comma-separated list of labels (e.g., "good first issue,help wanted")
         days_ago: Filter by issues updated within N days
     
     Returns issues from the last 30 days (or 24h for "newest" sort).
     """
     try:
-        labels = [label] if label else None
+        # Parse comma-separated lists
+        language_list = [l.strip() for l in languages.split(",")] if languages else None
+        label_list = [l.strip() for l in labels.split(",")] if labels else None
+
         results = search_engine.get_recent_issues(
             limit=limit, 
             sort_by=sort_by,
-            language=language,
-            labels=labels,
+            languages=language_list,
+            labels=label_list,
             days_ago=days_ago
         )
         
