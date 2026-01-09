@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,10 +15,12 @@ interface FilterBarProps {
     sortBy: "newest" | "recently_discussed" | "relevance" | "stars";
     selectedLabels: string[];
     daysAgo: number | null;
+    unassignedOnly: boolean;
     onLanguageChange: (langs: string[]) => void;
     onSortChange: (sort: "newest" | "recently_discussed" | "relevance" | "stars") => void;
     onLabelChange: (labels: string[]) => void;
     onTimeChange: (days: number | null) => void;
+    onUnassignedChange: (unassigned: boolean) => void;
 }
 
 const LANGUAGES = [
@@ -55,10 +58,12 @@ export function FilterBar({
     sortBy,
     selectedLabels,
     daysAgo,
+    unassignedOnly,
     onLanguageChange,
     onSortChange,
     onLabelChange,
     onTimeChange,
+    onUnassignedChange,
 }: FilterBarProps) {
     const getSelectedTimeLabel = () => {
         if (!daysAgo) return "Any Time";
@@ -212,6 +217,27 @@ export function FilterBar({
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Exclude Assigned Toggle */}
+            <div className={`
+                flex items-center gap-2 h-9 px-3 rounded-md border transition-colors duration-200
+                ${unassignedOnly
+                    ? 'bg-emerald-500/10 border-emerald-500/50'
+                    : 'bg-transparent border-border'
+                }
+            `}>
+                <Switch
+                    id="unassigned-only"
+                    checked={unassignedOnly}
+                    onCheckedChange={onUnassignedChange}
+                />
+                <label
+                    htmlFor="unassigned-only"
+                    className={`text-sm font-medium cursor-pointer select-none transition-colors duration-200 ${unassignedOnly ? 'text-emerald-400' : 'text-muted-foreground'}`}
+                >
+                    Unassigned Only
+                </label>
+            </div>
         </div>
     );
 }

@@ -26,6 +26,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<"newest" | "recently_discussed" | "relevance" | "stars">("newest");
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [daysAgo, setDaysAgo] = useState<number | null>(null);
+  const [unassignedOnly, setUnassignedOnly] = useState(true);
 
   const [allRecentIssues, setAllRecentIssues] = useState<SearchResult[]>([]);
   const [recentLoading, setRecentLoading] = useState(true);
@@ -139,7 +140,8 @@ export default function Home() {
         language: langs.length === 1 ? langs[0] : null, // Search API still uses single language
         sortBy,
         labels: selectedLabels.length > 0 ? selectedLabels : undefined,
-        daysAgo
+        daysAgo,
+        unassignedOnly
       });
     }
   };
@@ -151,7 +153,8 @@ export default function Home() {
         language: languages.length === 1 ? languages[0] : null,
         sortBy: sort,
         labels: selectedLabels.length > 0 ? selectedLabels : undefined,
-        daysAgo
+        daysAgo,
+        unassignedOnly
       });
     }
   };
@@ -163,7 +166,8 @@ export default function Home() {
         language: languages.length === 1 ? languages[0] : null,
         sortBy,
         labels: labels.length > 0 ? labels : undefined,
-        daysAgo
+        daysAgo,
+        unassignedOnly
       });
     }
   };
@@ -175,7 +179,21 @@ export default function Home() {
         language: languages.length === 1 ? languages[0] : null,
         sortBy,
         labels: selectedLabels.length > 0 ? selectedLabels : undefined,
-        daysAgo: days
+        daysAgo: days,
+        unassignedOnly
+      });
+    }
+  };
+
+  const handleUnassignedChange = (unassigned: boolean) => {
+    setUnassignedOnly(unassigned);
+    if (hasSearched) {
+      search(currentQuery, {
+        language: languages.length === 1 ? languages[0] : null,
+        sortBy,
+        labels: selectedLabels.length > 0 ? selectedLabels : undefined,
+        daysAgo,
+        unassignedOnly: unassigned
       });
     }
   };
@@ -189,6 +207,7 @@ export default function Home() {
     setSortBy("newest");
     setSelectedLabels([]);
     setDaysAgo(null);
+    setUnassignedOnly(false);
   };
 
   const handleRecentPageChange = (page: number) => {
@@ -239,10 +258,12 @@ export default function Home() {
               sortBy={sortBy}
               selectedLabels={selectedLabels}
               daysAgo={daysAgo}
+              unassignedOnly={unassignedOnly}
               onLanguageChange={handleLanguageChange}
               onSortChange={handleSortChange}
               onLabelChange={handleLabelChange}
               onTimeChange={handleTimeChange}
+              onUnassignedChange={handleUnassignedChange}
             />
           </div>
         </div>

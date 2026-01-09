@@ -59,10 +59,11 @@ export interface SearchParams {
   labels?: string[] | null;
   sort_by?: 'newest' | 'recently_discussed' | 'relevance' | 'stars' | null;
   days_ago?: number | null;
+  unassigned_only?: boolean;
 }
 
 export async function searchIssues(params: SearchParams): Promise<SearchResponse> {
-  const { query, limit = 20, page = 1, language, labels, sort_by, days_ago } = params;
+  const { query, limit = 20, page = 1, language, labels, sort_by, days_ago, unassigned_only } = params;
   
   const response = await fetch(`${API_BASE_URL}/api/search`, {
     method: 'POST',
@@ -76,7 +77,8 @@ export async function searchIssues(params: SearchParams): Promise<SearchResponse
       language,
       labels,
       sort_by,
-      days_ago
+      days_ago,
+      unassigned_only
     }),
   });
 

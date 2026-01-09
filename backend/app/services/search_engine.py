@@ -49,6 +49,9 @@ class SearchEngine:
         if query.days_ago:
             parsed.days_ago = query.days_ago
             
+        if query.unassigned_only:
+            parsed.unassigned_only = query.unassigned_only
+            
         logger.info(f"Final query config (after manual overrides): {parsed}")
         
         # 2. Generate query embedding

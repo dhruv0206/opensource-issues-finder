@@ -20,6 +20,7 @@ export interface SearchOptions {
   labels?: string[] | null;
   sortBy?: "newest" | "recently_discussed" | "relevance" | "stars" | null;
   daysAgo?: number | null;
+  unassignedOnly?: boolean;
 }
 
 interface UseSearchReturn {
@@ -92,7 +93,8 @@ export function useSearch(): UseSearchReturn {
         language: options?.language,
         labels: options?.labels,
         sort_by: options?.sortBy,
-        days_ago: options?.daysAgo
+        days_ago: options?.daysAgo,
+        unassigned_only: options?.unassignedOnly
       });
       setAllResults(response.results);
       setParsedQuery(response.parsed_query);

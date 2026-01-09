@@ -16,6 +16,7 @@ class SearchQuery(BaseModel):
     labels: list[str] | None = None
     sort_by: Literal["newest", "recently_discussed", "relevance", "stars"] | None = None
     days_ago: float | None = None
+    unassigned_only: bool = False
 
 class ParsedQuery(BaseModel):
     """Structured query parsed from natural language."""
