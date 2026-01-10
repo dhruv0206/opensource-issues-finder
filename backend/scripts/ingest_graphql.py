@@ -132,19 +132,55 @@ def main():
                 
                 logger.info(f"  Found {len(issues)} issues for {lang} with label '{label}'")
                 
-                # Generate embeddings
+                # === OPTIMIZATION: Skip unchanged issues ===
+                # Build list of issue IDs
+                from app.models.issue import Issue
+                issue_ids = [
+                    Issue.create_id(issue.repo_full_name, issue.issue_number) 
+                    for issue in issues
+                ]
+                
+                # Fetch existing issues from Pinecone (uses Read Units, not Write Units)
+                existing = pinecone.fetch_by_ids(issue_ids)
+                
+                # Filter to only new or changed issues
+                issues_to_process = []
+                skipped_count = 0
+                
+                for issue in issues:
+                    issue_id = Issue.create_id(issue.repo_full_name, issue.issue_number)
+                    
+                    if issue_id not in existing:
+                        # NEW issue - not in Pinecone yet
+                        issues_to_process.append(issue)
+                    else:
+                        # EXISTS - check if updated
+                        stored_updated_at = existing[issue_id].get("updated_at", "")
+                        if issue.updated_at != stored_updated_at:
+                            # CHANGED - GitHub has newer version
+                            issues_to_process.append(issue)
+                        else:
+                            # UNCHANGED - skip to save WUs!
+                            skipped_count += 1
+                
+                logger.info(f"  Filtered: {len(issues_to_process)} new/changed, {skipped_count} unchanged (skipped)")
+                
+                if not issues_to_process:
+                    logger.info(f"  No new or changed issues to ingest")
+                    continue
+                
+                # Generate embeddings only for new/changed issues
                 logger.info("  Generating embeddings...")
-                texts = [embedder.create_issue_text(issue) for issue in issues]
+                texts = [embedder.create_issue_text(issue) for issue in issues_to_process]
                 embeddings = embedder.generate_embeddings_batch(texts)
                 logger.info(f"  Generated {len(embeddings)} embeddings")
                 
                 # Create Issue objects
-                from app.models.issue import Issue
                 import time
                 now_ts = int(time.time())
                 
                 issue_objects = []
-                for i, metadata in enumerate(issues):
+                for i, metadata in enumerate(issues_to_process):
                     metadata.ingested_at = now_ts
                     issue_objects.append(Issue(
                         id=Issue.create_id(metadata.repo_full_name, metadata.issue_number),
@@ -155,8 +191,8 @@ def main():
                 # Upsert to Pinecone
                 pinecone.upsert_issues(issue_objects)
                 
-                total_issues += len(issues)
-                logger.info(f"  Ingested {len(issues)} issues (total: {total_issues})")
+                total_issues += len(issues_to_process)
+                logger.info(f"  Ingested {len(issues_to_process)} issues (total: {total_issues})")
                 
             except Exception as e:
                 if "rate limit" in str(e).lower():

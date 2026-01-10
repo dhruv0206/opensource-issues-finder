@@ -4,12 +4,14 @@ on:
   schedule:
     # Nightly at 2 AM UTC: Cleanup (remove closed + stale issues)
     - cron: '0 2 * * *'
+    # Every 4 hours: fetch last 4.5 hours of issues
+    - cron: '0 */4 * * *'
     # Every 2 hours: fetch last 2.5 hours of issues
-    - cron: '0 */2 * * *'
+    # - cron: '0 */2 * * *'  # DISABLED - using 4h cycle instead
     # Nightly at 4 AM UTC: Fresh (7d) + Popular (5000+ stars)
-    - cron: '0 4 * * *'
+    # - cron: '0 4 * * *'  # DISABLED - manual only
     # Nightly at 6 AM UTC: Today's issues (24h)
-    - cron: '0 6 * * *'
+    # - cron: '0 6 * * *'  # DISABLED - manual only
   workflow_dispatch:
     inputs:
       mode:
@@ -103,10 +105,10 @@ jobs:
             --recent-hours 24 \
             --any-label
 
-      # 3. Daily Cycles (Every 2h): Newest + Recently Discussed
-      # Runs at 00, 02, 08, 10, ... 22 (Skipping 04, 06 handled above)
-      - name: "Scheduled: Newest + Active Issues (2.5h)"
-        if: github.event_name == 'schedule' && github.event.schedule != '0 4 * * *' && github.event.schedule != '0 6 * * *'
+      # 3. Daily Cycles (Every 4h): Newest + Recently Discussed
+      # Runs at 00, 04, 08, 12, 16, 20
+      - name: "Scheduled: Newest + Active Issues (4.5h)"
+        if: github.event_name == 'schedule' && github.event.schedule == '0 */4 * * *'
         working-directory: ./backend
         env:
           GH_APP_ID: ${{ secrets.GH_APP_ID }}
@@ -116,18 +118,18 @@ jobs:
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
         run: |
-          echo "🆕 Fetching NEWLY CREATED issues (last 2.5 hours)..."
+          echo "🆕 Fetching NEWLY CREATED issues (last 4.5 hours)..."
           python -m scripts.ingest_graphql \
             --min-stars 0 \
             --max-issues 100 \
-            --created-hours 2.5 \
+            --created-hours 4.5 \
             --any-label
           
-          echo "🔥 Fetching RECENTLY DISCUSSED issues (last 2.5 hours)..."
+          echo "🔥 Fetching RECENTLY DISCUSSED issues (last 4.5 hours)..."
           python -m scripts.ingest_graphql \
             --min-stars 0 \
             --max-issues 200 \
-            --recent-hours 2.5 \
+            --recent-hours 4.5 \
             --any-label
 
       # ============ MANUAL RUNS ============

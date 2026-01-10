@@ -153,6 +153,41 @@ class PineconeClient:
         logger.info(f"Found {len(ids)} IDs via query fallback")
         return ids
     
+    def fetch_by_ids(self, ids: list[str]) -> dict[str, dict]:
+        """
+        Fetch existing vectors by their IDs to check for changes.
+        
+        Uses Read Units (RUs) which are much cheaper than Write Units (WUs).
+        This enables the "skip unchanged issues" optimization.
+        
+        Args:
+            ids: List of vector IDs to fetch
+            
+        Returns:
+            Dict mapping id -> metadata (only for IDs that exist)
+        """
+        if not ids:
+            return {}
+        
+        result = {}
+        
+        # Pinecone fetch has a limit of 1000 IDs per request
+        batch_size = 1000
+        for i in range(0, len(ids), batch_size):
+            batch = ids[i:i + batch_size]
+            try:
+                response = self.index.fetch(ids=batch)
+                
+                # response.vectors is a dict of id -> vector data
+                for vector_id, vector_data in response.vectors.items():
+                    result[vector_id] = vector_data.metadata if vector_data.metadata else {}
+                    
+            except Exception as e:
+                logger.warning(f"Error fetching batch {i//batch_size + 1}: {e}")
+        
+        logger.info(f"Fetched {len(result)} existing issues from Pinecone")
+        return result
+    
     def delete_by_ids(self, ids: list[str], batch_size: int = 100) -> int:
         """
         Delete vectors by their IDs.
