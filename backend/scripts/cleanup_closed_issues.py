@@ -46,7 +46,7 @@ def main():
         "--limit", 
         type=int, 
         default=None,
-        help="Limit number of issues to check (for testing)"
+        help="Limit number of issues to check (default: None = check all)"
     )
     parser.add_argument(
         "--batch-size", 
@@ -81,13 +81,15 @@ def main():
     all_ids = pinecone.list_all_ids()
     logger.info(f"Found {len(all_ids):,} issue IDs in Pinecone")
     
-    if args.limit:
-        all_ids = all_ids[:args.limit]
-        logger.info(f"Limited to {len(all_ids):,} issues for this run")
     
     if not all_ids:
         logger.info("No issues to check. Exiting.")
         return 0
+    
+    # Apply limit if specified
+    if args.limit:
+        all_ids = all_ids[:args.limit]
+        logger.info(f"Limited to {len(all_ids):,} issues for this run")
     
     # Step 3: Batch check issues on GitHub
     logger.info("\n" + "=" * 60)
@@ -102,6 +104,7 @@ def main():
     # Process in batches for memory efficiency
     batch_size = args.batch_size
     total_batches = (len(all_ids) + batch_size - 1) // batch_size
+    logger.info(f"Processing {len(all_ids):,} issues in {total_batches} batches")
     
     for batch_num in range(total_batches):
         start_idx = batch_num * batch_size

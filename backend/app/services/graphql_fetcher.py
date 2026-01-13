@@ -231,9 +231,20 @@ class GraphQLFetcher:
         
         raise ValueError("No GitHub authentication available")
     
-    def _execute_query(self, query: str, variables: dict, retry_on_401: bool = True) -> dict:
-        """Execute a GraphQL query with automatic token refresh on 401."""
+    def _execute_query(self, query: str, variables: dict, retry_on_401: bool = True, raise_on_graphql_error: bool = True) -> dict:
+        """
+        Execute a GraphQL query with automatic token refresh and rate limit handling.
+        
+        Args:
+            query: GraphQL query string
+            variables: Query variables
+            retry_on_401: Whether to retry once on 401 Unauthorized
+            raise_on_graphql_error: Whether to raise Exception on GraphQL errors (default True)
+        """
         token = self._get_auth_token()
+        
+        # Check if we need to sleep due to rate limit (naive check)
+        # In a real app we'd track this statefully, but checking the last response is good enough
         
         response = requests.post(
             GITHUB_GRAPHQL_URL,
@@ -251,24 +262,50 @@ class GraphQLFetcher:
             self._installation_token = None
             self._token_expires_at = None
             # Retry once with fresh token
-            return self._execute_query(query, variables, retry_on_401=False)
+            return self._execute_query(query, variables, retry_on_401=False, raise_on_graphql_error=raise_on_graphql_error)
         
+        # Handle Rate Limit (403)
         if response.status_code == 403:
-            logger.error("Rate limited by GitHub")
+            logger.warning("Got 403 Forbidden (likely rate limit), checking headers...")
+            reset_time = response.headers.get("X-RateLimit-Reset")
+            if reset_time:
+                sleep_seconds = int(reset_time) - int(time.time()) + 5
+                if sleep_seconds > 0:
+                    logger.warning(f"Rate limit exceeded. Sleeping for {sleep_seconds} seconds until reset...")
+                    time.sleep(sleep_seconds)
+                    return self._execute_query(query, variables, retry_on_401=retry_on_401, raise_on_graphql_error=raise_on_graphql_error)
+            
+            logger.error("Rate limited by GitHub (403)")
             raise Exception("GitHub rate limit exceeded")
         
         response.raise_for_status()
         result = response.json()
         
+        # Check for GraphQL-level rate limit errors
         if "errors" in result:
+            for error in result["errors"]:
+                if error.get("type") == "RATE_LIMIT":
+                    logger.warning("GraphQL RATE_LIMIT error. Sleeping...")
+                    # Unfortunately GraphQL doesn't always give reset time in error, but we can try to guess or use a default
+                    time.sleep(60) # Sleep 1 minute and retry
+                    return self._execute_query(query, variables, retry_on_401=retry_on_401, raise_on_graphql_error=raise_on_graphql_error)
+
+        if "errors" in result and raise_on_graphql_error:
             logger.error(f"GraphQL errors: {result['errors']}")
             raise Exception(f"GraphQL error: {result['errors']}")
         
         # Log rate limit info (less frequently to reduce noise)
         rate_limit = result.get("data", {}).get("rateLimit", {})
-        if rate_limit and rate_limit.get("remaining", 5000) % 500 == 0:
-            logger.info(f"GraphQL rate limit remaining: {rate_limit.get('remaining')}")
-        
+        if rate_limit:
+            remaining = rate_limit.get("remaining", 5000)
+            if remaining < 100:
+                reset_at = rate_limit.get("resetAt")
+                logger.warning(f"📉 Low rate limit: {remaining} remaining. Reset at {reset_at}")
+                # Optional: proactive sleep if very low
+                if remaining < 10:
+                     logger.warning("Rate limit critically low. Sleeping 60s...")
+                     time.sleep(60)
+
         return result
     
     def search_issues(
@@ -574,16 +611,36 @@ class GraphQLFetcher:
         }}
         """
         
-        result = self._execute_query(query, {})
+        # execution error handling: return raw result including errors
+        result = self._execute_query(query, {}, raise_on_graphql_error=False)
+        
+        # Handle Repo NOT FOUND
+        # The structure is result['errors'][0]['type'] == 'NOT_FOUND' if repo is missing
+        if "errors" in result:
+             for error in result["errors"]:
+                 # If repo is not found, ALL issues in it are treated as NOT_FOUND (because they are gone)
+                 # Path typically looks like ['repository']
+                 if error.get("type") == "NOT_FOUND" and error.get("path") == ["repository"]:
+                     logger.warning(f"Repository {owner}/{name} not found. Treating all {len(numbers)} issues as NOT_FOUND.")
+                     return {n: "NOT_FOUND" for n in numbers}
         
         # Parse results
         repo_data = result.get("data", {}).get("repository", {})
+        
+        # If repo_data is None but we didn't catch specific error above, 
+        # it still likely means repo is gone or inaccessible
+        if not repo_data:
+             logger.warning(f"Repository {owner}/{name} returned no data. Treating as NOT_FOUND.")
+             return {n: "NOT_FOUND" for n in numbers}
+
         issue_states = {}
         
         for idx, number in enumerate(numbers):
             issue_data = repo_data.get(f"issue{idx}")
             if issue_data:
-                issue_states[number] = issue_data.get("state", "UNKNOWN")
+                state = issue_data.get("state", "UNKNOWN")
+                # Normalize state
+                issue_states[number] = state
             else:
                 issue_states[number] = "NOT_FOUND"
         
