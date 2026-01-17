@@ -105,28 +105,25 @@ async def get_recent_issues(
 
 @router.get("/last-updated")
 async def get_last_updated() -> dict:
-    """Get the timestamp of the most recently ingested issue."""
+    """Get the timestamp of the most recently updated issue."""
     try:
         from datetime import datetime
         
-        # Query multiple results and find the max ingested_at
-        # (Pinecone doesn't support sorting by metadata)
-        results = search_engine.pinecone.index.query(
-            vector=[0.0] * 768,  # Dummy vector
-            top_k=100,  # Get many to find the newest
-            include_metadata=True,
-            filter={"ingested_at": {"$gt": 0}}
+        # Use get_recent_issues to find the single newest issue by updated_at
+        # This reuses the correct sorting logic defined in SearchEngine
+        results = search_engine.get_recent_issues(
+            limit=1,
+            sort_by="recently_discussed"
         )
         
-        if results.matches:
-            # Find max ingested_at
-            max_ts = max(m.metadata.get("ingested_at", 0) for m in results.matches)
-            if max_ts > 0:
-                dt = datetime.fromtimestamp(max_ts)
-                return {
-                    "last_updated": dt.isoformat(),
-                    "timestamp": max_ts
-                }
+        if results:
+            newest_issue = results[0]
+            # Convert ISO string to dt object
+            dt = datetime.fromisoformat(newest_issue.updated_at.replace('Z', '+00:00'))
+            return {
+                "last_updated": newest_issue.updated_at,
+                "timestamp": dt.timestamp()
+            }
         
         return {"last_updated": None, "timestamp": None}
         
