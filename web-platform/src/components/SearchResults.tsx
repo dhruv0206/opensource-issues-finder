@@ -9,9 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface SearchResultsProps {
     results: SearchResult[];
     isLoading: boolean;
+    userId?: string;
 }
 
-export function SearchResults({ results, isLoading }: SearchResultsProps) {
+export function SearchResults({ results, isLoading, userId }: SearchResultsProps) {
     if (isLoading) {
         return (
             <div className="space-y-4">
@@ -49,7 +50,7 @@ export function SearchResults({ results, isLoading }: SearchResultsProps) {
                 Found {results.length} contribution opportunities
             </p>
             {results.map((issue, index) => (
-                <IssueCard key={issue.issue_id} issue={issue} index={index} />
+                <IssueCard key={issue.issue_id} issue={issue} index={index} userId={userId} />
             ))}
         </motion.div>
     );

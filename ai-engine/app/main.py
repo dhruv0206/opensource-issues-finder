@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from app.routes import search, ingest
+from app.routes import search, ingest, issues
 
 # Setup logging
 logging.basicConfig(
@@ -31,6 +31,7 @@ app.add_middleware(
 # Include routers
 app.include_router(search.router)
 app.include_router(ingest.router)
+app.include_router(issues.router)
 
 
 @app.get("/")

@@ -1,5 +1,11 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/opesource-github-search/backend', '-f', 'ai-engine/Dockerfile', '.']
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/opesource-github-search/backend', '-f', 'ai-engine/Dockerfile', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/opesource-github-search/backend']
+
 images:
-- 'gcr.io/opesource-github-search/backend'
+  - 'gcr.io/opesource-github-search/backend'

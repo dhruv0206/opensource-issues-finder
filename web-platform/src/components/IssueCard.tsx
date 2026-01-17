@@ -5,11 +5,13 @@ import { StarIcon, ChatBubbleLeftIcon, ArrowTopRightOnSquareIcon } from '@heroic
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StartWorkingButton } from '@/components/StartWorkingButton';
 import { SearchResult } from '@/lib/api';
 
 interface IssueCardProps {
     issue: SearchResult;
     index: number;
+    userId?: string;
 }
 
 const labelVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -44,7 +46,18 @@ function formatNumber(num: number): string {
     return num.toString();
 }
 
-export function IssueCard({ issue, index }: IssueCardProps) {
+// Extract repo owner and name from URL
+function parseRepoUrl(repoUrl: string): { owner: string; name: string } {
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (match) {
+        return { owner: match[1], name: match[2] };
+    }
+    return { owner: '', name: '' };
+}
+
+export function IssueCard({ issue, index, userId }: IssueCardProps) {
+    const { owner, name } = parseRepoUrl(issue.repo_url);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -121,8 +134,16 @@ export function IssueCard({ issue, index }: IssueCardProps) {
                         </span>
                         <span>Created: {formatDate(issue.created_at)}</span>
                         <span>Updated: {formatDate(issue.updated_at)}</span>
-                        <span className="ml-auto">
-                            Match: {(issue.score * 100).toFixed(0)}%
+                        <span className="ml-auto flex items-center gap-2">
+                            <span>Match: {(issue.score * 100).toFixed(0)}%</span>
+                            <StartWorkingButton
+                                issueUrl={issue.issue_url}
+                                repoOwner={owner}
+                                repoName={name}
+                                issueNumber={issue.issue_number}
+                                issueTitle={issue.title}
+                                userId={userId}
+                            />
                         </span>
                     </div>
                 </CardContent>
@@ -130,3 +151,4 @@ export function IssueCard({ issue, index }: IssueCardProps) {
         </motion.div>
     );
 }
+

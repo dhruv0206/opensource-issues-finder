@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     pinecone_index_name: str = "github-contributions"
     pinecone_environment: str | None = None
     
+    # Database
+    database_url: str | None = None
+    
     # App settings
     embedding_model: str = "models/text-embedding-004"
     embedding_dimension: int = 768
@@ -78,6 +81,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra fields in .env
 
 
 @lru_cache()
