@@ -10,13 +10,19 @@ import {
     UserCircle,
     Settings,
     LogOut,
-    Github
+    Github,
+    ClipboardList
 } from 'lucide-react';
 const menuItems = [
     {
         name: 'Dashboard',
         icon: LayoutDashboard,
         href: '/dashboard',
+    },
+    {
+        name: 'My Issues',
+        icon: ClipboardList,
+        href: '/issues',
     },
     {
         name: 'Open Source Finder',

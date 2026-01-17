@@ -1,11 +1,14 @@
 """FastAPI main application."""
 
+from dotenv import load_dotenv
+load_dotenv()  # Load .env file BEFORE other imports that need env vars
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
-from app.routes import search, ingest, issues
+from app.routes import search, ingest, issues, users
 
 # Setup logging
 logging.basicConfig(
@@ -16,10 +19,13 @@ logging.basicConfig(
 # Create FastAPI app
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create tables
+    # Startup: Create tables (only if database is configured)
     from app.database import engine, Base
-    from app.models import issues  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    if engine is not None:
+        from app.models import issues  # noqa: F401
+        Base.metadata.create_all(bind=engine)
+    else:
+        logging.warning("DATABASE_URL not set - skipping table creation")
     yield
     # Shutdown: Clean up resources if needed
 
@@ -43,6 +49,7 @@ app.add_middleware(
 app.include_router(search.router)
 app.include_router(ingest.router)
 app.include_router(issues.router)
+app.include_router(users.router)
 
 
 @app.get("/")

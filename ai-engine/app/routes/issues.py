@@ -67,6 +67,9 @@ class TrackedIssuesListResponse(BaseModel):
     success: bool
     issues: List[TrackedIssueResponse]
     count: int
+    total: int
+    page: int
+    total_pages: int
 
 
 # Routes
@@ -99,14 +102,30 @@ def track_issue(request: TrackIssueRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/tracked/{user_id}")
-def get_tracked_issues(user_id: str, db: Session = Depends(get_db)):
-    """Get all tracked issues for a user."""
-    issues = issue_tracker.get_tracked_issues_by_user(db, user_id)
+def get_tracked_issues(
+    user_id: str, 
+    page: int = 1,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """Get tracked issues for a user with pagination."""
+    # Get total count first
+    total = issue_tracker.get_tracked_issues_count(db, user_id)
+    
+    # Calculate pagination
+    offset = (page - 1) * limit
+    total_pages = (total + limit - 1) // limit  # Ceiling division
+    
+    # Get paginated issues
+    issues = issue_tracker.get_tracked_issues_by_user(db, user_id, limit=limit, offset=offset)
     
     return TrackedIssuesListResponse(
         success=True,
         issues=[TrackedIssueResponse.model_validate(i) for i in issues],
         count=len(issues),
+        total=total,
+        page=page,
+        total_pages=total_pages,
     )
 
 

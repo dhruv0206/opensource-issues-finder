@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { SearchBar } from '@/components/SearchBar';
 import { SearchResults } from '@/components/SearchResults';
 import { ParsedQueryDisplay } from '@/components/ParsedQueryDisplay';
-import { Pagination } from '@/components/Pagination';
+import { Pagination } from '@/components/shared/Pagination';
 import { useSearch } from '@/hooks/useSearch';
 import { useSearchLimit } from '@/hooks/useSearchLimit';
 import { getRecentIssues, SearchResult } from '@/lib/api';
@@ -256,13 +256,10 @@ export function OpenSourceFinder({ showSidebarTrigger = false }: OpenSourceFinde
     const PaginationBlock = () => (
         currentPagination && displayResults.length > 0 ? (
             <Pagination
-                page={currentPagination.page}
+                currentPage={currentPagination.page}
                 totalPages={currentPagination.totalPages}
-                total={currentPagination.total}
-                hasNext={currentPagination.hasNext}
-                hasPrev={currentPagination.hasPrev}
+                totalItems={currentPagination.total}
                 onPageChange={handlePageChange}
-                isLoading={isLoading}
             />
         ) : null
     );

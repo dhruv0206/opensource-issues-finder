@@ -32,13 +32,29 @@ def start_tracking_issue(
     return issue
 
 
-def get_tracked_issues_by_user(db: Session, user_id: str) -> List[TrackedIssue]:
-    """Get all tracked issues for a user, ordered by start date."""
+def get_tracked_issues_by_user(
+    db: Session, 
+    user_id: str, 
+    limit: int = 10,
+    offset: int = 0
+) -> List[TrackedIssue]:
+    """Get tracked issues for a user with pagination, ordered by start date."""
     return (
         db.query(TrackedIssue)
         .filter(TrackedIssue.user_id == user_id)
         .order_by(desc(TrackedIssue.started_at))
+        .offset(offset)
+        .limit(limit)
         .all()
+    )
+
+
+def get_tracked_issues_count(db: Session, user_id: str) -> int:
+    """Get total count of tracked issues for a user."""
+    return (
+        db.query(TrackedIssue)
+        .filter(TrackedIssue.user_id == user_id)
+        .count()
     )
 
 

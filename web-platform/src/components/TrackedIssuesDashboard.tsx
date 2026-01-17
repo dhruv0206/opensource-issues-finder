@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { VerifyPRButton } from '@/components/VerifyPRButton';
+import { Pagination } from '@/components/shared/Pagination';
 import {
     ExternalLink,
     Clock,
@@ -108,6 +109,12 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const ITEMS_PER_PAGE = 10;
+
     // Track New Issue dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
     const [issueUrl, setIssueUrl] = useState('');
@@ -119,12 +126,14 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-    const fetchIssues = async () => {
+    const fetchIssues = async (page: number = currentPage) => {
         setLoading(true);
         setError(null);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/issues/tracked/${userId}`);
+            const response = await fetch(
+                `${API_BASE_URL}/api/issues/tracked/${userId}?page=${page}&limit=${ITEMS_PER_PAGE}`
+            );
             const data = await response.json();
 
             if (!response.ok) {
@@ -132,11 +141,18 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
             }
 
             setIssues(data.issues);
+            setTotalPages(data.total_pages);
+            setTotalItems(data.total);
+            setCurrentPage(page);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Something went wrong');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (page: number) => {
+        fetchIssues(page);
     };
 
     const handleAddToPortfolio = async () => {
@@ -292,7 +308,7 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
             <Card>
                 <CardContent className="py-8 text-center">
                     <p className="text-destructive mb-4">{error}</p>
-                    <Button variant="outline" onClick={fetchIssues}>
+                    <Button variant="outline" onClick={() => fetchIssues()}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Try Again
                     </Button>
@@ -327,7 +343,7 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
                 <h2 className="text-xl font-semibold">Tracked Issues ({issues.length})</h2>
                 <div className="flex items-center gap-2">
                     {TrackIssueDialog}
-                    <Button variant="ghost" size="sm" onClick={fetchIssues}>
+                    <Button variant="ghost" size="sm" onClick={() => fetchIssues()}>
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
@@ -386,45 +402,52 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
                 const StatusIcon = config.icon;
 
                 return (
-                    <Card key={issue.id}>
-                        <CardHeader className="pb-3">
-                            <CardDescription className="flex items-center justify-between">
-                                <a
-                                    href={`https://github.com/${issue.repo_owner}/${issue.repo_name}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="font-medium hover:text-primary transition-colors"
-                                >
-                                    {issue.repo_owner}/{issue.repo_name}
-                                </a>
-                                <Badge variant={config.variant} className="gap-1">
-                                    <StatusIcon className="h-3 w-3" />
-                                    {config.label}
-                                </Badge>
-                            </CardDescription>
+                    <Card key={issue.id} className="bg-card">
+                        <CardContent className="p-6">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                                {/* Issue Info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                                        <span>{issue.repo_owner}/{issue.repo_name}</span>
+                                    </div>
 
-                            <CardTitle className="text-lg">
-                                <a
-                                    href={issue.issue_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-primary transition-colors flex items-start gap-2"
-                                >
-                                    <span className="text-muted-foreground">#{issue.issue_number}</span>
-                                    <span>{issue.issue_title || 'Untitled Issue'}</span>
-                                    <ExternalLink className="h-4 w-4 flex-shrink-0 mt-1 opacity-50" />
-                                </a>
-                            </CardTitle>
-                        </CardHeader>
+                                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                                        <span className="text-primary">#{issue.issue_number}</span>
+                                        <span className="truncate">
+                                            {issue.issue_title || 'Untitled Issue'}
+                                        </span>
+                                        <a
+                                            href={issue.issue_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-muted-foreground hover:text-primary transition-colors"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                        </a>
+                                    </h3>
 
-                        <CardContent className="pt-0">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-muted-foreground">
-                                    Started: {formatDate(issue.started_at)}
-                                    {issue.verified_at && ` • Verified: ${formatDate(issue.verified_at)}`}
-                                </p>
+                                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                        <span>
+                                            Started: {new Date(issue.started_at).toLocaleDateString()}
+                                        </span>
+                                        {issue.verified_at && (
+                                            <span>
+                                                • Verified: {new Date(issue.verified_at).toLocaleDateString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                                <div className="flex items-center gap-2">
+                                {/* Status & Actions */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge
+                                        variant="outline"
+                                        className={`flex items-center gap-1`}
+                                    >
+                                        <StatusIcon className="h-3 w-3" />
+                                        {config.label}
+                                    </Badge>
+
                                     {issue.status === 'in_progress' && (
                                         <VerifyPRButton
                                             issueId={issue.id}
@@ -461,7 +484,18 @@ export function TrackedIssuesDashboard({ userId }: TrackedIssuesDashboardProps) 
                     </Card>
                 );
             })}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={handlePageChange}
+                    className="mt-6"
+                />
+            )}
         </div>
     );
 }
-

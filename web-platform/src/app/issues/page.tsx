@@ -1,10 +1,10 @@
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { TrackedIssuesDashboard } from '@/components/TrackedIssuesDashboard';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { DashboardContent } from '@/components/dashboard/DashboardContent';
 
-export default async function DashboardPage() {
+export default async function MyIssuesPage() {
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -17,13 +17,13 @@ export default async function DashboardPage() {
         <DashboardLayout>
             <main className="container mx-auto px-8 py-8">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+                    <h1 className="text-3xl font-bold mb-2">My Issues</h1>
                     <p className="text-muted-foreground">
-                        Your open source contribution overview and progress.
+                        Track issues you&apos;re working on and submit your PRs for verification.
                     </p>
                 </div>
 
-                <DashboardContent userId={session.user.id} />
+                <TrackedIssuesDashboard userId={session.user.id} />
             </main>
         </DashboardLayout>
     );
