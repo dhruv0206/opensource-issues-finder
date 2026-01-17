@@ -2,7 +2,7 @@
 
 import { useSession, signIn, signOut } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 
 export function Header() {
     const { data: session, isPending } = useSession();

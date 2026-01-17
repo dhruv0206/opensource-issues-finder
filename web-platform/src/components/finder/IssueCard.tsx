@@ -5,7 +5,7 @@ import { StarIcon, ChatBubbleLeftIcon, ArrowTopRightOnSquareIcon } from '@heroic
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { StartWorkingButton } from '@/components/StartWorkingButton';
+import { StartWorkingButton } from '@/components/finder/StartWorkingButton';
 import { SearchResult } from '@/lib/api';
 
 interface IssueCardProps {

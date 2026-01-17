@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { VerifyPRButton } from '@/components/VerifyPRButton';
+import { VerifyPRButton } from '@/components/issues/VerifyPRButton';
 import { Pagination } from '@/components/shared/Pagination';
 import {
     ExternalLink,

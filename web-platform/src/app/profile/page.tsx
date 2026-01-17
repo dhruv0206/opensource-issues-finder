@@ -1,5 +1,5 @@
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { ComingSoon } from '@/components/ComingSoon';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ComingSoon } from '@/components/shared/ComingSoon';
 
 export default function ProfilePage() {
     return (

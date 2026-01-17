@@ -1,8 +1,8 @@
 'use client';
 
-import { DashboardSidebar } from '@/components/DashboardSidebar';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { BetaBanner } from '@/components/BetaBanner';
+import { DashboardSidebar } from '@/components/layout/DashboardSidebar';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
+import { BetaBanner } from '@/components/layout/BetaBanner';
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (

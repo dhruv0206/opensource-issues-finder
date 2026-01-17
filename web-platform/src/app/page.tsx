@@ -1,9 +1,9 @@
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { OpenSourceFinder } from '@/components/OpenSourceFinder';
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { Footer } from '@/components/Footer';
+import { OpenSourceFinder } from '@/components/finder/OpenSourceFinder';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Footer } from '@/components/layout/Footer';
 
 export default async function Home() {
   const session = await auth.api.getSession({

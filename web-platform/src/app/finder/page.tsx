@@ -1,8 +1,8 @@
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { OpenSourceFinder } from '@/components/OpenSourceFinder';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { OpenSourceFinder } from '@/components/finder/OpenSourceFinder';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export default async function FinderPage() {
     const session = await auth.api.getSession({

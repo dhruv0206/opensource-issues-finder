@@ -1,8 +1,8 @@
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { TrackedIssuesDashboard } from '@/components/TrackedIssuesDashboard';
-import { DashboardLayout } from '@/components/DashboardLayout';
+import { TrackedIssuesDashboard } from '@/components/issues/TrackedIssuesDashboard';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 export default async function MyIssuesPage() {
     const session = await auth.api.getSession({

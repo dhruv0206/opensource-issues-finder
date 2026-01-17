@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Header } from '@/components/Header';
-import { SearchBar } from '@/components/SearchBar';
-import { SearchResults } from '@/components/SearchResults';
-import { ParsedQueryDisplay } from '@/components/ParsedQueryDisplay';
+import { Header } from '@/components/layout/Header';
+import { SearchBar } from '@/components/finder/SearchBar';
+import { SearchResults } from '@/components/finder/SearchResults';
+import { ParsedQueryDisplay } from '@/components/finder/ParsedQueryDisplay';
 import { Pagination } from '@/components/shared/Pagination';
 import { useSearch } from '@/hooks/useSearch';
 import { useSearchLimit } from '@/hooks/useSearchLimit';
@@ -12,12 +12,12 @@ import { getRecentIssues, SearchResult } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { ExclamationCircleIcon } from '@heroicons/react/24/outline';
-import { SignupPromptModal } from '@/components/SignupPromptModal';
-import { StatsBar } from '@/components/StatsBar';
+import { SignupPromptModal } from '@/components/modals/SignupPromptModal';
+import { StatsBar } from '@/components/finder/StatsBar';
 import { useSession } from '@/lib/auth-client';
 import dynamic from 'next/dynamic';
 
-const FilterBar = dynamic(() => import('@/components/FilterBar').then(mod => mod.FilterBar), {
+const FilterBar = dynamic(() => import('@/components/finder/FilterBar').then(mod => mod.FilterBar), {
     ssr: false,
     loading: () => <div className="h-10 w-full animate-pulse bg-muted rounded-md" />
 });
