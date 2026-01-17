@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import logging
 
 from app.routes import search, ingest, issues
@@ -13,10 +14,20 @@ logging.basicConfig(
 )
 
 # Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create tables
+    from app.database import engine, Base
+    from app.models import issues  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: Clean up resources if needed
+
 app = FastAPI(
     title="GitHub Contribution Finder",
     description="AI-powered search for open source contribution opportunities",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware for frontend

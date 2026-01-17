@@ -24,7 +24,7 @@ def start_tracking_issue(
         repo_name=repo_name,
         issue_number=issue_number,
         issue_title=issue_title,
-        status=IssueStatus.IN_PROGRESS,
+        status=IssueStatus.IN_PROGRESS.value,
     )
     db.add(issue)
     db.commit()
@@ -68,7 +68,7 @@ def submit_pr_for_verification(
     issue = get_tracked_issue_by_id(db, issue_id)
     if issue:
         issue.pr_url = pr_url
-        issue.status = IssueStatus.PR_SUBMITTED
+        issue.status = IssueStatus.PR_SUBMITTED.value
         db.commit()
         db.refresh(issue)
     return issue
@@ -80,7 +80,7 @@ def mark_issue_verified(
     """Mark an issue as verified after PR is merged."""
     issue = get_tracked_issue_by_id(db, issue_id)
     if issue:
-        issue.status = IssueStatus.VERIFIED
+        issue.status = IssueStatus.VERIFIED.value
         issue.verified_at = merged_at
         db.commit()
         db.refresh(issue)
@@ -88,10 +88,10 @@ def mark_issue_verified(
 
 
 def abandon_issue(db: Session, issue_id: str) -> bool:
-    """Mark an issue as abandoned."""
+    """Delete a tracked issue."""
     issue = get_tracked_issue_by_id(db, issue_id)
     if issue:
-        issue.status = IssueStatus.ABANDONED
+        db.delete(issue)
         db.commit()
         return True
     return False

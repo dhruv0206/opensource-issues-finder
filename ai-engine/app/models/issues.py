@@ -28,7 +28,10 @@ class TrackedIssue(Base):
     repo_name = Column(String, nullable=False)
     issue_number = Column(Integer, nullable=False)
     issue_title = Column(Text, nullable=True)
-    status = Column(Enum(IssueStatus), default=IssueStatus.IN_PROGRESS)
+    status = Column(
+        Enum(IssueStatus, values_callable=lambda x: [e.value for e in x]),
+        default=IssueStatus.IN_PROGRESS.value
+    )
     started_at = Column(DateTime(timezone=True), server_default=func.now())
     pr_url = Column(Text, nullable=True)
     verified_at = Column(DateTime(timezone=True), nullable=True)
