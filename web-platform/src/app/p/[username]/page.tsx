@@ -10,8 +10,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const { username } = await params;
 
     return {
-        title: `${username} | ContribFinder`,
-        description: `View ${username}'s verified open source contributions on ContribFinder.`,
+        title: `${username} | DevProof`,
+        description: `View ${username}'s verified open source contributions on DevProof.`,
         openGraph: {
             title: `${username}'s Developer Portfolio`,
             description: `Check out ${username}'s verified open source contributions.`,

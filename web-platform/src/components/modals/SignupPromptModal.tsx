@@ -43,7 +43,7 @@ export function SignupPromptModal({ mode, onDismiss }: SignupPromptModalProps) {
                 <p className="text-muted-foreground text-center mb-6">
                     {isHard
                         ? "You've reached the free search limit. Sign in to continue discovering open source opportunities."
-                        : 'Sign in to unlock unlimited searches and get the most out of GitHub Contribution Finder!'
+                        : 'Sign in to unlock unlimited searches and get the most out of DevProof!'
                     }
                 </p>
 

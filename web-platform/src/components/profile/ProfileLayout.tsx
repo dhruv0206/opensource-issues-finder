@@ -16,7 +16,7 @@ export function ProfileLayout({ children }: ProfileLayoutProps) {
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 font-bold text-lg">
                         <Github className="h-6 w-6" />
-                        <span>ContribFinder</span>
+                        <span>DevProof</span>
                     </Link>
                     <div className="flex items-center gap-3">
                         <Link
@@ -41,7 +41,7 @@ export function ProfileLayout({ children }: ProfileLayoutProps) {
                     <p>
                         Powered by{' '}
                         <Link href="/" className="font-medium hover:text-foreground">
-                            ContribFinder
+                            DevProof
                         </Link>
                         {' '}— Verify your open source contributions
                     </p>

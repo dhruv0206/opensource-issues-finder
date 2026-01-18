@@ -1,41 +1,94 @@
-# GitHub Contribution Finder 🔍
+# DevProof 🚀
 
-AI-powered search engine to discover open source contribution opportunities on GitHub.
+**Prove Your Code. Build Your Credibility.**
 
-![GitHub Contribution Finder](https://img.shields.io/badge/Powered%20by-Gemini%20AI-blue)
-![Pinecone](https://img.shields.io/badge/Vector%20DB-Pinecone-green)
-![Next.js](https://img.shields.io/badge/Frontend-Next.js%2015-black)
+Discover contribution opportunities with AI-powered search. Track your work. Build a verified developer portfolio.
+
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-opensource--search.vercel.app-blue)](https://opensource-search.vercel.app)
+[![Discord](https://img.shields.io/badge/Discord-Join_Community-7289DA?logo=discord&logoColor=white)](https://discord.gg/dZRFt9kN)
+![Powered by Gemini](https://img.shields.io/badge/AI-Gemini%202.0-4285F4?logo=google&logoColor=white)
+![Next.js](https://img.shields.io/badge/Frontend-Next.js%2016-black)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)
 
-## 🔗 Live Demo
+---
 
-- **Frontend:** [opensource-search.vercel.app](https://opensource-search.vercel.app)
-- **Backend API:** [github-finder-backend-18267677210.us-central1.run.app/docs](https://github-finder-backend-18267677210.us-central1.run.app/docs)
-- **Discord:** [Join our community!](https://discord.gg/dZRFt9kN)
-## ✨ Features
+## 🎯 What is DevProof?
 
-- **Natural Language Search** - Find issues using plain English: "beginner Python issues in ML projects"
-- **AI-Powered Query Parsing** - Gemini extracts filters like language, difficulty, and recency
-- **Semantic Search** - Finds conceptually similar issues, not just keyword matches
-- **Combined Ranking** - Results scored by relevance (40%) + recency (35%) + popularity (25%)
-- **Smart Filters** - Unassigned issues, topics, stars, labels, date ranges
-- **Default Recent Issues** - Homepage shows fresh contribution opportunities
+DevProof helps developers:
+
+1. **🔍 Find Issues** — AI-powered semantic search across 10,000+ open source issues
+2. **📊 Track Progress** — Monitor issues you're working on
+3. **✅ Verify Contributions** — Prove your merged PRs with cryptographic verification
+4. **🪪 Build Portfolio** — Share a public profile showcasing your verified work
+
+---
+
+## ✨ Key Features
+
+### 🔍 AI-Powered Search (The Core)
+
+> **[🚀 Try the AI Search Now →](https://opensource-search.vercel.app/finder)**
+
+Find the perfect issue in seconds using natural language:
+
+```
+"beginner Python issues in machine learning projects"
+"unassigned TypeScript bugs in popular repos"  
+"documentation issues I can fix today"
+```
+
+**How it works:**
+- **Gemini AI** parses your query → extracts language, difficulty, labels, recency
+- **Semantic Search** via Pinecone finds conceptually similar issues
+- **Smart Ranking** combines relevance (40%) + freshness (35%) + popularity (25%)
+
+| Query | What it finds |
+|-------|---------------|
+| `beginner Python issues` | Good first issues in Python repos |
+| `unassigned help wanted` | Unclaimed issues needing contributors |
+| `recent TypeScript CLI tools` | Fresh issues in CLI projects |
+| `easy issues nobody working on` | Beginner-friendly unassigned work |
+
+### 📊 Contribution Dashboard
+
+- Track issues you're working on
+- Submit PRs for verification
+- See your progress at a glance
+
+### ✅ Verified Contributions
+
+When your PR gets merged:
+- We verify authorship via GitHub API
+- Your contribution is **cryptographically linked** to your profile
+- Shows lines added/removed, merge date, repository
+
+### 🪪 Public Portfolio
+
+Shareable developer profile at `devproof.io/p/your-username`:
+- Verified PR count
+- Lines of code contributed
+- Contribution timeline
+- One-click sharing to LinkedIn/X
+
+---
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Next.js       │────▶│   FastAPI       │────▶│   Pinecone      │
+│   Next.js 16    │────▶│   FastAPI       │────▶│   Pinecone      │
 │   Frontend      │     │   Backend       │     │   Vector DB     │
+│   (Vercel)      │     │   (GCP)         │     │   (10k+ issues) │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                               │
                               ▼
-                        ┌─────────────────┐
-                        │   Gemini AI     │
-                        │   (Embeddings & │
-                        │    Query Parse) │
-                        └─────────────────┘
+┌─────────────────┐     ┌─────────────────┐
+│   PostgreSQL    │     │   Gemini 2.0    │
+│   (User Data)   │     │   (AI Engine)   │
+└─────────────────┘     └─────────────────┘
 ```
+
+---
 
 ## 🚀 Quick Start
 
@@ -43,9 +96,8 @@ AI-powered search engine to discover open source contribution opportunities on G
 
 - Python 3.11+
 - Node.js 18+
-- [Pinecone](https://www.pinecone.io/) account (free tier works)
-- [Google AI Studio](https://aistudio.google.com/) API key
-- [GitHub Personal Access Token](https://github.com/settings/tokens)
+- PostgreSQL database
+- API Keys: [Pinecone](https://www.pinecone.io/), [Google AI](https://aistudio.google.com/), [GitHub](https://github.com/settings/tokens)
 
 ### 1. Clone & Setup
 
@@ -54,159 +106,73 @@ git clone https://github.com/dhruv0206/opensource-issues-finder.git
 cd opensource-issues-finder
 ```
 
-### 2. Backend Setup
+### 2. Backend (ai-engine)
 
 ```bash
-cd backend
-
-# Create virtual environment
+cd ai-engine
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
 
-# Configure environment
+# Configure .env
 cp .env.example .env
-# Edit .env with your API keys
+# Add your API keys
+
+# Run
+uvicorn app.main:app --reload --port 8000
 ```
 
-**.env file:**
-```env
-GITHUB_TOKEN=ghp_your_github_token
-GEMINI_API_KEY=your_gemini_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-PINECONE_INDEX_NAME=github-contributions
-```
-
-### 3. Ingest Data (GitHub App + GraphQL 🚀)
-
-The new GraphQL-based ingestion is 10-20x faster than REST and uses a GitHub App for higher rate limits.
+### 3. Frontend (web-platform)
 
 ```bash
-# Efficient ingestion (Auto-detects active issues)
-python -m scripts.ingest_graphql --min-stars 200 --recent-hours 24
-```
-
-**Common Flags:**
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--min-stars` | 200 | Minimum repo stars (0 for all repos) |
-| `--recent-hours` | - | Fetch issues **updated** in last N hours |
-| `--created-hours` | - | Fetch issues **created** in last N hours (truly new issues) |
-| `--recent-days` | - | Fetch issues updated in last N days |
-| `--max-issues` | 100 | Max issues to ingest per language |
-| `--any-label` | - | If set, ignores label filters (fetches everything) |
-
-## ⏱️ Ingestion Schedule
-
-The system runs a **Tiered Ingestion Strategy** via GitHub Actions to balance freshness vs. quality.
-
-| Frequency | Star Filter | Time Window | Purpose |
-| :--- | :--- | :--- | :--- |
-| **⚡ Every 2 Hours** | **0+** (Catch All) | Last 2.5 Hours | Catch fast-moving & new issues (Velocity) |
-| **🌙 Nightly (4 AM)** | **100+** | Last 7 Days | Deep refresh of established content (Quality) |
-| **☀️ Daily (6 AM)** | **100+** | Last 24 Hours | Complete "Daily Digest" gap-fill |
-| **🌟 Popular** | **5000+** | Recent | High-visibility issues from top repos |
-
-
-## 🎯 Search Modes
-
-The AI query parser understands these intents:
-
-| User Intent | Keywords Recognized | What Happens |
-|-------------|---------------------|--------------|
-| **Recent Issues** | "recent", "latest", "new", "fresh", "today" | Filters to last 7 days |
-| **Popular Repos** | "popular", "trending", "famous" | min_stars: 1000+ |
-| **Beginner-Friendly** | "beginner", "easy", "starter", "first" | difficulty: beginner + good first issue label |
-| **Unassigned** | "unassigned", "unclaimed", "nobody working" | Only issues with no assignees |
-| **Help Wanted** | "help wanted", "needs help" | Filters by help wanted label |
-| **By Language** | "Python", "JavaScript", "TypeScript", "Go", "Rust", "Java", "C++", "Dart", etc. | Language filter |
-| **By Topic** | "machine learning", "CLI", "web" | Matches repo topics |
-| **Sort by Stars** | "most stars", "most popular" | Sorts by repo stars |
-| **Sort by Newest** | "newest", "newly created" | Sorts by created_at (default) |
-| **Sort by Activity** | "recently discussed", "most active" | Sorts by updated_at |
-
-### 4. Start Backend
-
-```bash
-uvicorn app.main:app --reload
-# API available at http://localhost:8000
-# Docs at http://localhost:8000/docs
-```
-
-### 5. Frontend Setup
-
-```bash
-cd ../frontend
-
-# Install dependencies
+cd web-platform
 npm install
-
-# Start dev server
 npm run dev
-# UI available at http://localhost:3000
+# Open http://localhost:3000
 ```
 
-## 🔍 Example Searches
-
-| Query | What it finds |
-|-------|---------------|
-| `beginner Python issues` | Good first issues in Python repos |
-| `unassigned help wanted` | Unclaimed issues needing contributors |
-| `recent TypeScript CLI tools` | Fresh issues in CLI projects |
-| `documentation fixes in popular repos` | Doc issues in 1000+ star repos |
-| `machine learning projects` | Issues in ML-related repos |
-| `easy issues nobody working on` | Beginner-friendly unassigned issues |
+---
 
 ## 📁 Project Structure
 
 ```
-github-contributions-search/
-├── backend/
+devproof/
+├── ai-engine/                 # Python Backend
 │   ├── app/
-│   │   ├── main.py              # FastAPI entry point
-│   │   ├── config.py            # Settings & env vars
-│   │   ├── models/
-│   │   │   ├── issue.py         # Issue data models
-│   │   │   └── query.py         # Search query models
-│   │   ├── services/
-│   │   │   ├── github_fetcher.py    # GitHub API client
-│   │   │   ├── embedder.py          # Gemini embeddings
-│   │   │   ├── query_parser.py      # NL → structured query
-│   │   │   ├── pinecone_client.py   # Vector DB client
-│   │   │   └── search_engine.py     # Search orchestrator
-│   │   └── routes/
-│   │       └── search.py        # API endpoints
+│   │   ├── main.py           # FastAPI entry
+│   │   ├── routes/           # API endpoints
+│   │   │   ├── search.py     # Issue search
+│   │   │   ├── issues.py     # Tracking & verification
+│   │   │   └── users.py      # Profiles & stats
+│   │   └── services/
+│   │       ├── search_engine.py    # Search orchestrator
+│   │       ├── query_parser.py     # AI query parsing
+│   │       └── issue_tracker.py    # Contribution tracking
 │   └── scripts/
-│       └── ingest_graphql.py    # Data ingestion CLI (GraphQL)
+│       ├── ingest_graphql.py       # Data ingestion
+│       └── verify_prs.py           # PR verification cron
 │
-└── frontend/
+└── web-platform/              # Next.js Frontend
     └── src/
         ├── app/
-        │   ├── page.tsx         # Main page
-        │   ├── layout.tsx       # Root layout
-        │   └── globals.css      # Styles
-        ├── components/
-        │   ├── SearchBar.tsx
-        │   ├── SearchResults.tsx
-        │   ├── IssueCard.tsx
-        │   ├── Pagination.tsx
-        │   └── ParsedQueryDisplay.tsx
-        ├── hooks/
-        │   └── useSearch.ts     # Search state hook
-        └── lib/
-            └── api.ts           # Backend API client
+        │   ├── page.tsx            # Landing + Search
+        │   ├── dashboard/          # User dashboard
+        │   ├── issues/             # My Issues
+        │   ├── profile/            # My Profile
+        │   └── p/[username]/       # Public profiles
+        └── components/
+            ├── finder/             # Search components
+            ├── layout/             # Navigation
+            └── profile/            # Portfolio UI
 ```
+
+---
 
 ## 🔧 API Reference
 
 ### Search Issues
 ```http
 POST /api/search
-Content-Type: application/json
-
 {
   "query": "beginner Python issues",
   "limit": 20,
@@ -219,56 +185,69 @@ Content-Type: application/json
 GET /api/search/recent?limit=20&sort_by=newest
 ```
 
-**Sort Options:** `newest` (default), `recently_discussed`, `relevance`, `stars`
-
-### Health Check
+### Public Profile
 ```http
-GET /api/search/health
+GET /api/users/profile/{username}
 ```
 
-## 📊 Combined Scoring
+### Track Issue
+```http
+POST /api/issues/track
+{
+  "user_id": "...",
+  "issue_url": "https://github.com/...",
+  "repo_owner": "org",
+  "repo_name": "repo",
+  "issue_number": 123
+}
+```
 
-Results are ranked by a combined score:
-
-| Factor | Weight | Description |
-|--------|--------|-------------|
-| Semantic Relevance | 40% | How well content matches query |
-| Recency | 35% | Newer issues score higher |
-| Popularity | 25% | More stars = higher score |
-
-## 🏷️ Contribution Labels Recognized
-
-The ingestion fetches issues with these labels:
-- `good first issue`, `help wanted`
-- `beginner`, `beginner friendly`, `easy`, `starter`
-- `first-timers-only`, `newbie`, `up-for-grabs`
-- `documentation`, `docs`, `hacktoberfest`
-- And 20+ more variations
+---
 
 ## 🛠️ Tech Stack
 
-**Backend:**
-- FastAPI (Python web framework)
-- Pinecone (Vector database)
-- Google Gemini AI (Embeddings + query parsing)
-- PyGithub (GitHub API client)
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 16, TypeScript, Tailwind CSS, shadcn/ui |
+| **Backend** | FastAPI, Python 3.11 |
+| **AI** | Google Gemini 2.0 (embeddings + query parsing) |
+| **Vector DB** | Pinecone (semantic search) |
+| **Database** | PostgreSQL (user data, contributions) |
+| **Auth** | BetterAuth (GitHub OAuth) |
+| **Hosting** | Vercel (frontend), GCP Cloud Run (backend) |
 
-**Frontend:**
-- Next.js 15 (React framework)
-- TypeScript
-- Tailwind CSS
-- shadcn/ui (Component library)
-- Framer Motion (Animations)
+---
 
-## 📝 License
+## 📊 Data Freshness
 
-MIT License - feel free to use this for your own projects!
+Issues are ingested on a tiered schedule:
+
+| Frequency | Stars | Window | Purpose |
+|-----------|-------|--------|---------|
+| Every 4 hours | 0+ | Last 4h | Catch new issues fast |
+| Daily (4 AM) | 100+ | 7 days | Deep refresh |
+| Daily (6 AM) | 100+ | 24h | Gap fill |
+
+---
 
 ## 🤝 Contributing
 
-Contributions welcome! This project was built to help people find contribution opportunities - ironic, right? 😄
+This project helps developers find contribution opportunities — help us improve it!
 
 1. Fork the repo
-2. Create a feature branch
-3. Make your changes
-4. Submit a PR
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push (`git push origin feature/amazing`)
+5. Open a PR
+
+---
+
+## 📝 License
+
+MIT License — Use freely for personal and commercial projects.
+
+---
+
+**Built with ❤️ to help developers break into open source.**
+
+[Try it now →](https://opensource-search.vercel.app)

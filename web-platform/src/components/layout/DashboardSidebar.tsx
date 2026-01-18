@@ -63,7 +63,7 @@ export function DashboardSidebar() {
             <div className="p-6 border-b border-border">
                 <Link href="/" className="flex items-center gap-2 font-bold text-lg">
                     <Github className="h-6 w-6" />
-                    <span>ContribFinder</span>
+                    <span>DevProof</span>
                 </Link>
             </div>
 

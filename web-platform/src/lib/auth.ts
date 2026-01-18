@@ -51,7 +51,7 @@ export const auth = betterAuth({
                   headers: {
                     Authorization: `Bearer ${accessToken}`,
                     Accept: "application/vnd.github+json",
-                    "User-Agent": "ContribFinder",
+                    "User-Agent": "DevProof",
                   },
                 });
                 

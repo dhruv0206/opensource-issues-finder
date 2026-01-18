@@ -7,11 +7,11 @@ const siteUrl = "https://opensource-search.vercel.app";
 
 export const metadata: Metadata = {
   title: {
-    default: "GitHub Contribution Finder | Find Open Source Issues to Contribute",
-    template: "%s | GitHub Contribution Finder",
+    default: "DevProof | Prove Your Code. Build Your Credibility.",
+    template: "%s | DevProof",
   },
-  description: "AI-powered search engine to discover 100K+ beginner-friendly open source issues on GitHub. Find good first issues, help wanted, and beginner-friendly contributions today.",
-  keywords: ["github", "open source", "contribution", "issues", "good first issue", "help wanted", "beginner friendly", "first contribution", "open source projects", "github issues"],
+  description: "AI-powered platform to discover open source issues, verify your contributions, and build a verified developer portfolio. Ship. Verify. Showcase.",
+  keywords: ["github", "open source", "contribution", "developer portfolio", "verified contributions", "good first issue", "help wanted", "beginner friendly", "proof of work", "developer proof"],
   authors: [{ name: "Dhruv" }],
   creator: "Dhruv",
   metadataBase: new URL(siteUrl),
@@ -19,17 +19,17 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "GitHub Contribution Finder | Find Open Source Issues",
-    description: "AI-powered search engine to discover 100K+ beginner-friendly open source issues on GitHub. Start contributing today!",
+    title: "DevProof | Prove Your Code. Build Your Credibility.",
+    description: "AI-powered platform to discover open source issues, verify your contributions, and build a verified developer portfolio.",
     url: siteUrl,
-    siteName: "GitHub Contribution Finder",
+    siteName: "DevProof",
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "GitHub Contribution Finder",
-    description: "AI-powered search engine to discover 100K+ beginner-friendly open source issues on GitHub.",
+    title: "DevProof",
+    description: "AI-powered platform to discover open source issues, verify your contributions, and build a verified developer portfolio.",
   },
   robots: {
     index: true,
@@ -52,8 +52,8 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    "name": "GitHub Contribution Finder",
-    "description": "AI-powered search engine to discover 100K+ beginner-friendly open source issues on GitHub",
+    "name": "DevProof",
+    "description": "AI-powered platform to discover open source issues, verify your contributions, and build a verified developer portfolio",
     "url": "https://opensource-search.vercel.app",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Web",
