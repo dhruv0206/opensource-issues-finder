@@ -311,6 +311,27 @@ def verify_pr_directly(request: VerifyPRDirectRequest, db: Session = Depends(get
     db.commit()
     db.refresh(issue)
     
+    # Also insert into verified_contributions for line count tracking
+    db.execute(
+        text("""
+            INSERT INTO verified_contributions 
+            (id, user_id, issue_url, pr_url, repo_owner, repo_name, merged_at, lines_added, lines_removed)
+            VALUES (gen_random_uuid(), :user_id, :issue_url, :pr_url, :repo_owner, :repo_name, :merged_at, :lines_added, :lines_removed)
+            ON CONFLICT DO NOTHING
+        """),
+        {
+            "user_id": request.user_id,
+            "issue_url": clean_pr_url,
+            "pr_url": clean_pr_url,
+            "repo_owner": request.repo_owner,
+            "repo_name": request.repo_name,
+            "merged_at": merged_at,
+            "lines_added": lines_added,
+            "lines_removed": lines_removed,
+        }
+    )
+    db.commit()
+    
     return {
         "success": True,
         "message": f"PR verified! '{pr_title}' has been added to your portfolio.",
