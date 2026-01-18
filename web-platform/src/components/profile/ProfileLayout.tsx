@@ -14,8 +14,8 @@ export function ProfileLayout({ children }: ProfileLayoutProps) {
             {/* Minimal Header */}
             <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-                        <Github className="h-6 w-6" />
+                    <Link href="/" className="flex items-center gap-3 font-bold text-lg">
+                        <img src="/logo_transparent.png" alt="DevProof" className="h-8 w-8 object-contain" />
                         <span>DevProof</span>
                     </Link>
                     <div className="flex items-center gap-3">

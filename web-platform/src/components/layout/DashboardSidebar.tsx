@@ -61,8 +61,8 @@ export function DashboardSidebar() {
     return (
         <div className="h-screen w-64 border-r border-border bg-card flex flex-col fixed left-0 top-0">
             <div className="p-6 border-b border-border">
-                <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-                    <Github className="h-6 w-6" />
+                <Link href="/" className="flex items-center gap-3 font-bold text-2xl">
+                    <img src="/logo_transparent.png" alt="DevProof" className="h-16 w-16 object-contain" />
                     <span>DevProof</span>
                 </Link>
             </div>
