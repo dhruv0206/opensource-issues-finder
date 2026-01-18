@@ -1,17 +1,19 @@
 name: Data Ingestion (GraphQL)
 
 on:
-  schedule:
-    # Nightly at 2 AM UTC: Cleanup (remove closed + stale issues)
-    - cron: '0 2 * * *'
-    # Every 4 hours: fetch last 4.5 hours of issues
-    - cron: '0 */4 * * *'
-    # Every 2 hours: fetch last 2.5 hours of issues
-    # - cron: '0 */2 * * *'  # DISABLED - using 4h cycle instead
-    # Nightly at 4 AM UTC: Fresh (7d) + Popular (5000+ stars)
-    # - cron: '0 4 * * *'  # DISABLED - manual only
-    # Nightly at 6 AM UTC: Today's issues (24h)
-    # - cron: '0 6 * * *'  # DISABLED - manual only
+  # ALL SCHEDULED INGESTION PAUSED TO REDUCE PINECONE WU COSTS
+  # Uncomment to re-enable scheduled runs
+  # schedule:
+  #   # Nightly at 2 AM UTC: Cleanup (remove closed + stale issues)
+  #   - cron: '0 2 * * *'
+  #   # Every 4 hours: fetch last 4.5 hours of issues
+  #   - cron: '0 */4 * * *'
+  #   # Every 2 hours: fetch last 2.5 hours of issues
+  #   # - cron: '0 */2 * * *'  # DISABLED - using 4h cycle instead
+  #   # Nightly at 4 AM UTC: Fresh (7d) + Popular (5000+ stars)
+  #   # - cron: '0 4 * * *'  # DISABLED - manual only
+  #   # Nightly at 6 AM UTC: Today's issues (24h)
+  #   # - cron: '0 6 * * *'  # DISABLED - manual only
   workflow_dispatch:
     inputs:
       mode:
