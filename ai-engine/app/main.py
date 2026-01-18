@@ -37,9 +37,16 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend
+# When allow_credentials=True, allow_origins cannot be ["*"]
+# Must specify exact origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for public API
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "https://opensource-search.vercel.app",
+        "https://contribfinder.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
