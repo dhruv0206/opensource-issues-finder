@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException
 import logging
 
-from app.models.query import SearchQuery, SearchResult, ParsedQuery
+from app.models.query import SearchQuery, SearchResult, ParsedQuery, RecentResponse
 from app.services.search_engine import SearchEngine
 
 logger = logging.getLogger(__name__)
@@ -53,15 +53,15 @@ async def search(query: SearchQuery) -> dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/recent")
+@router.get("/recent", response_model=RecentResponse)
 async def get_recent_issues(
     limit: int = 20, 
-    sort_by: str = "newest",
+    sort_by: str = "recently_discussed",
     languages: str | None = None,
     labels: str | None = None,
-    days_ago: int | None = None,
+    days_ago: float | None = None,
     unassigned_only: bool = False
-) -> dict:
+) -> RecentResponse:
     """
     Get recent contribution opportunities for homepage display.
     
@@ -93,10 +93,10 @@ async def get_recent_issues(
             unassigned_only=unassigned_only
         )
         
-        return {
-            "results": [r.model_dump() for r in results],
-            "total": len(results)
-        }
+        return RecentResponse(
+            results=results,
+            total=len(results)
+        )
         
     except Exception as e:
         logger.error(f"Recent issues error: {e}")

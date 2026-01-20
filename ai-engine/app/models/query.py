@@ -71,5 +71,9 @@ class PaginatedResponse(BaseModel):
     page: int
     limit: int
     total_pages: int
-    has_next: bool
-    has_prev: bool
+
+class RecentResponse(BaseModel):
+    """Response model for recent issues endpoint."""
+    
+    results: list[SearchResult]
+    total: int

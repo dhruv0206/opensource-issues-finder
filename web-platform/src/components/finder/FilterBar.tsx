@@ -204,8 +204,8 @@ export function FilterBar({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-[200px]">
-                    <DropdownMenuItem onClick={() => onSortChange("newest")}>
-                        <ClockIcon className="mr-2 h-4 w-4" /> Newest (Created)
+                    <DropdownMenuItem disabled onClick={() => onSortChange("newest")} className="opacity-50 cursor-not-allowed">
+                        <ClockIcon className="mr-2 h-4 w-4" /> Newest (Temporarily Disabled)
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onSortChange("recently_discussed")}>
                         <ClockIcon className="mr-2 h-4 w-4" /> Recently Discussed

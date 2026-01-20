@@ -81,7 +81,7 @@ class SearchEngine:
         sort_by: str = "newest",
         languages: list[str] | None = None,
         labels: list[str] | None = None,
-        days_ago: int | None = None,
+        days_ago: float | None = None,
         unassigned_only: bool = False
     ) -> list[SearchResult]:
         """Get recent issues for default homepage display.

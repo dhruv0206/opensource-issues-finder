@@ -112,7 +112,7 @@ export interface RecentResponse {
 
 export async function getRecentIssues(
   limit: number = 20, 
-  sortBy: 'newest' | 'recently_discussed' | 'relevance' | 'stars' = 'newest',
+  sortBy: 'newest' | 'recently_discussed' | 'relevance' | 'stars' = 'recently_discussed',
   languages?: string[],
   labels?: string[],
   daysAgo?: number | null,

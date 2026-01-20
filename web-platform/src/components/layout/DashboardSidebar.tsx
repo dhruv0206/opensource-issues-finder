@@ -103,8 +103,8 @@ export function DashboardSidebar() {
                         className="w-full justify-start gap-3 text-primary hover:text-primary hover:bg-primary/10"
                         onClick={handleSignIn}
                     >
-                        <LogIn className="h-5 w-5" />
-                        Sign In
+                        <Github className="h-5 w-5" />
+                        Sign in with GitHub
                     </Button>
                 )}
             </div>
