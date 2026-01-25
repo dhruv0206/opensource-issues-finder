@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function ProjectsList({ userId }: { userId: string }) {
+export function ProjectsList({ userId, currentUser }: { userId: string, currentUser?: string }) {
     const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function ProjectsList({ userId }: { userId: string }) {
     return (
         <div className="space-y-4">
             {projects.map((p, i) => (
-                <VerifiedProjectCard key={i} project={p} />
+                <VerifiedProjectCard key={i} project={p} currentUser={currentUser} />
             ))}
         </div>
     );

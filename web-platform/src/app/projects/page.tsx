@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
                     <AddProjectModal userId={session.user.id} defaultGithubUsername={session.user.name} />
                 </div>
 
-                <ProjectsList userId={session.user.id} />
+                <ProjectsList userId={session.user.id} currentUser={session.user.name} />
             </main>
         </DashboardLayout>
     );

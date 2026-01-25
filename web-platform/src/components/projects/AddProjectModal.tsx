@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Loader2, Plus, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Loader2, Plus, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -17,6 +17,8 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
 
     // Contributor Mode State
     const [isContributor, setIsContributor] = useState(false)
+    const [isContributionDetected, setIsContributionDetected] = useState(false)
+    const [confirmedContribution, setConfirmedContribution] = useState(false)
     const [githubUsername, setGithubUsername] = useState("")
 
     // Pre-Scan State
@@ -60,6 +62,19 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
             const data = await res.json()
             setScanResult(data)
             setProjectType(data.archetype?.name || "Full Stack Application")
+
+            // Proactive Detection
+            try {
+                const urlObj = new URL(url)
+                const pathParts = urlObj.pathname.split('/').filter(Boolean)
+                const repoOwner = pathParts[0]
+
+                if (repoOwner && defaultGithubUsername && repoOwner.toLowerCase() !== defaultGithubUsername.toLowerCase()) {
+                    setIsContributionDetected(true)
+                    setIsContributor(true)
+                }
+            } catch (e) { console.error("URL Parse error", e) }
+
             setScanned(true)
 
         } catch (e: any) {
@@ -154,6 +169,8 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
         setRejectionReason(null)
         // Keep contributor settings? Maybe reset them too.
         setIsContributor(false)
+        setIsContributionDetected(false)
+        setConfirmedContribution(false)
         setGithubUsername("")
     }
 
@@ -177,6 +194,8 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                     <DialogDescription>
                         {rejectionReason ? (
                             "Verification Failed"
+                        ) : isContributionDetected && !confirmedContribution ? (
+                            "Contributor Verification"
                         ) : !scanned
                             ? "Step 1: Enter your GitHub URL to start."
                             : !claimsReviewed
@@ -201,6 +220,12 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 To prevent fraud, DevProof requires you to be a primary contributor. If this is a team project, ensure you have committed significant code with your GitHub email.
                             </p>
                         </div>
+                        {rejectionReason === "ContactUs" && (
+                            <div className="bg-blue-50 p-4 rounded-md text-sm text-blue-700 mt-2 mx-8 text-center flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                Please contact our support team to verify your relationship with this project.
+                            </div>
+                        )}
                     </div>
                 ) : !scanned ? (
                     // STEP 1: INPUT
@@ -217,41 +242,31 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 💡 Tip: We analyze your <strong>README</strong> to find technical claims. Make sure it mentions your key features!
                             </p>
                         </div>
-
-
-
-                        {/* Contributor Toggle */}
-                        <div className="flex items-center space-x-2 pt-1 border-t mt-2">
-                            <Switch
-                                id="contributor-mode"
-                                checked={isContributor}
-                                onCheckedChange={(checked) => {
-                                    setIsContributor(checked)
-                                    if (checked && defaultGithubUsername) {
-                                        setGithubUsername(defaultGithubUsername)
-                                    }
-                                }}
-                                disabled={loading}
-                            />
-                            <label htmlFor="contributor-mode" className="text-sm font-medium cursor-pointer select-none">
-                                I am a Contributor (Not Owner)
-                            </label>
+                    </div>
+                ) : isContributionDetected && !confirmedContribution ? (
+                    // CONTRIBUTION CONFIRMATION VIEW
+                    <div className="flex flex-col items-center justify-center py-8 text-center space-y-6">
+                        <div className="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center">
+                            <ShieldCheck className="w-8 h-8 text-cyan-600" />
                         </div>
-
-                        {isContributor && (
-                            <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 pl-6 border-l-2 border-muted ml-1">
-                                <label className="text-sm font-medium">Your GitHub Username</label>
-                                <Input
-                                    placeholder="e.g. dhruv0206"
-                                    value={githubUsername}
-                                    onChange={(e) => setGithubUsername(e.target.value)}
-                                    disabled={true} // Locked to logged-in user
-                                />
-                                <p className="text-[11px] text-muted-foreground">
-                                    We will verify <strong>YOUR</strong> specific commits in this repo.
-                                </p>
-                            </div>
-                        )}
+                        <div className="space-y-2">
+                            <h3 className="font-bold text-lg">Contribution Detected</h3>
+                            <p className="text-sm text-muted-foreground px-4">
+                                This repository belongs to someone else. <br />
+                                <strong>Are you a contributor to this project?</strong>
+                            </p>
+                            <p className="text-xs text-muted-foreground px-8 pt-2">
+                                We will verify <strong>YOUR</strong> specific code contributions using your GitHub handle <strong>{defaultGithubUsername}</strong>.
+                            </p>
+                        </div>
+                        <div className="flex flex-col w-full gap-2 px-8">
+                            <Button onClick={() => setConfirmedContribution(true)} className="bg-cyan-600 hover:bg-cyan-700">
+                                Yes, I am a Contributor
+                            </Button>
+                            <Button variant="outline" onClick={() => setRejectionReason("ContactUs")}>
+                                No, this is not my work
+                            </Button>
+                        </div>
                     </div>
                 ) : !claimsReviewed ? (
                     // STEP 2: STACK CONFIRMATION
@@ -318,7 +333,11 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                 <DialogFooter>
                     {/* Navigation Buttons */}
                     {rejectionReason ? (
-                        <Button onClick={handleReset} variant="destructive" className="w-full">Okay, I understand</Button>
+                        <Button onClick={handleReset} variant="destructive" className="w-full">
+                            {rejectionReason === "ContactUs" ? "Close" : "Okay, I understand"}
+                        </Button>
+                    ) : isContributionDetected && !confirmedContribution ? (
+                        null // Buttons are in the special view
                     ) : !scanned ? (
                         <Button onClick={handleScan} disabled={loading || !url}>Scan Repository</Button>
                     ) : !claimsReviewed ? (

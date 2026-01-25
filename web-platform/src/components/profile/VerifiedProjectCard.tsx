@@ -29,7 +29,27 @@ interface ProjectProps {
     verifiedFeatures: VerifiedFeature[]
 }
 
-export function VerifiedProjectCard({ project }: { project: ProjectProps }) {
+export function VerifiedProjectCard({ project, currentUser }: { project: ProjectProps, currentUser?: string }) {
+    // Determine Role
+    let isContributor = false;
+    let actualOwner = "";
+
+    try {
+        const urlParts = new URL(project.repoUrl).pathname.split("/").filter(Boolean);
+        if (urlParts.length >= 2) {
+            actualOwner = urlParts[0];
+            if (currentUser && actualOwner.toLowerCase() !== currentUser.toLowerCase()) {
+                isContributor = true;
+            }
+        }
+    } catch (e) { console.error("Invalid Repo URL", e) }
+
+    // Effective Score Logic
+    const rawScore = project.score || 0;
+    const effectiveScore = isContributor
+        ? rawScore * (project.authorship / 100)
+        : rawScore;
+
     const tierColor = project.tier === "ELITE" ? "text-purple-600 border-purple-200 bg-purple-50" :
         project.tier === "ADVANCED" ? "text-blue-600 border-blue-200 bg-blue-50" :
             "text-slate-600 border-slate-200 bg-slate-50";
@@ -51,15 +71,22 @@ export function VerifiedProjectCard({ project }: { project: ProjectProps }) {
                                 </a>
                             </CardTitle>
                             {project.score && (
-                                <Badge variant="outline" className={`ml-2 text-xs font-bold uppercase tracking-wider ${tierColor}`}>
-                                    {project.tier} • {project.score.toFixed(0)} PTS
-                                </Badge>
+                                <div className="flex flex-col ml-2">
+                                    <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider ${isContributor ? "text-cyan-600 border-cyan-200 bg-cyan-50" : tierColor}`}>
+                                        {project.tier} • {isContributor ? effectiveScore.toFixed(1) : project.score.toFixed(0)} PTS
+                                    </Badge>
+                                    {isContributor && (
+                                        <span className="text-[10px] text-muted-foreground ml-1">
+                                            (Project: {project.score.toFixed(0)} pts)
+                                        </span>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
-                                <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
-                                Verified
+                                <ShieldCheck className={`w-3.5 h-3.5 ${isContributor ? "text-cyan-600" : "text-green-600"}`} />
+                                {isContributor ? "Verified Contributor" : "Verified Owner"}
                             </span>
                             <span className="flex items-center gap-1">
                                 <Zap className="w-3.5 h-3.5 text-amber-500" />
