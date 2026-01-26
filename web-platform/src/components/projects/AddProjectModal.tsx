@@ -1,13 +1,22 @@
 "use client"
+// Force HMR Update
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
-import { Loader2, Plus, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Loader2, Plus, CheckCircle2, AlertTriangle, ShieldCheck, Circle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
+
+const PROGRESS_STEPS = [
+    "Connecting to GitHub",
+    "Verifying Authorship",
+    "Reading Source Code",
+    "Generating Rubric",
+    "Deep Mentor Audit",
+    "Finalizing Score"
+]
 
 export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: string, defaultGithubUsername?: string }) {
     const [open, setOpen] = useState(false)
@@ -19,9 +28,7 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
     const [isContributor, setIsContributor] = useState(false)
     const [isContributionDetected, setIsContributionDetected] = useState(false)
     const [confirmedContribution, setConfirmedContribution] = useState(false)
-    const [githubUsername, setGithubUsername] = useState("")
 
-    // Pre-Scan State
     // Pre-Scan State
     const [scanResult, setScanResult] = useState<any>(null) // { stack: {...}, authorship: ... }
     const [projectType, setProjectType] = useState("")
@@ -30,12 +37,24 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
     const [extractedClaims, setExtractedClaims] = useState<string[]>([])
     const [selectedClaims, setSelectedClaims] = useState<string[]>([])
     const [claimsReviewed, setClaimsReviewed] = useState(false)
-    const [rejectionReason, setRejectionReason] = useState<string | null>(null) // New state
+    const [rejectionReason, setRejectionReason] = useState<string | null>(null)
+
+    // New Progress State
+    const [isAuditing, setIsAuditing] = useState(false)
+    const [currentStep, setCurrentStep] = useState(0)
+    const progressInterval = useRef<NodeJS.Timeout | null>(null)
 
     const router = useRouter()
 
     // Use the passed userId or fallback to demo if not provided (though page always provides it)
     const effectiveUserId = userId || "demo-user-123"
+
+    // Cleanup interval on unmount
+    useEffect(() => {
+        return () => {
+            if (progressInterval.current) clearInterval(progressInterval.current)
+        }
+    }, [])
 
     const handleScan = async () => {
         if (!url) return
@@ -118,9 +137,26 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
         }
     }
 
+    const startSimulatedProgress = () => {
+        setCurrentStep(0)
+
+        // Clear any existing
+        if (progressInterval.current) clearInterval(progressInterval.current)
+
+        progressInterval.current = setInterval(() => {
+            setCurrentStep(prev => {
+                // Stall at "Deep Mentor Audit" (step 4) until actual response
+                if (prev >= 4) {
+                    return prev
+                }
+                return prev + 1
+            })
+        }, 2000) // Advance every 2 seconds roughly
+    }
+
     const handleConfirmImport = async () => {
-        setLoading(true)
-        setStatusText("Running Mentor Audit (Gemini)...")
+        setIsAuditing(true)
+        startSimulatedProgress()
 
         try {
             const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -139,24 +175,34 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
             const data = await res.json()
             if (!res.ok) throw new Error(data.detail)
 
-            setOpen(false)
-            handleReset()
-            window.location.reload() // Force reload to fetch new project data
+            // Success! Fast forward to end
+            if (progressInterval.current) clearInterval(progressInterval.current)
+            setCurrentStep(PROGRESS_STEPS.length - 1) // Finalizing
+
+            setTimeout(() => {
+                setOpen(false)
+                handleReset()
+                window.location.reload()
+            }, 1000)
 
         } catch (e: any) {
+            if (progressInterval.current) clearInterval(progressInterval.current)
+
             const msg = e.message || ""
             if (msg.includes("Low Authorship")) {
                 setRejectionReason("Low Authorship")
+                setIsAuditing(false) // Exit progress view to show rejection
             } else {
                 alert("Verification Failed: " + msg)
+                setIsAuditing(false)
             }
-        } finally {
-            setLoading(false)
-            setStatusText("")
         }
     }
 
     const handleReset = () => {
+        // Only reset if NOT auditing (to prevent accidental loss if closed)
+        if (isAuditing) return
+
         setScanned(false)
         setScanResult(null)
         setProjectType("")
@@ -167,16 +213,19 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
         setSelectedClaims([])
         setStatusText("")
         setRejectionReason(null)
-        // Keep contributor settings? Maybe reset them too.
         setIsContributor(false)
         setIsContributionDetected(false)
         setConfirmedContribution(false)
-        setGithubUsername("")
+        setIsAuditing(false)
+        setCurrentStep(0)
+        if (progressInterval.current) clearInterval(progressInterval.current)
     }
 
     const handleOpenChange = (newOpen: boolean) => {
         setOpen(newOpen)
         if (!newOpen) {
+            // Give a delay before reset to allow animation to close, 
+            // but checked inside handleReset if we should actually reset
             setTimeout(handleReset, 300)
         }
     }
@@ -192,19 +241,45 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                 <DialogHeader>
                     <DialogTitle>Import & Verify Project</DialogTitle>
                     <DialogDescription>
-                        {rejectionReason ? (
-                            "Verification Failed"
-                        ) : isContributionDetected && !confirmedContribution ? (
-                            "Contributor Verification"
-                        ) : !scanned
-                            ? "Step 1: Enter your GitHub URL to start."
-                            : !claimsReviewed
-                                ? "Step 2: Detect & Confirm Stack."
-                                : "Step 3: Confirm features to verify."}
+                        {isAuditing ? "Deep Mentor Analysis Running..." :
+                            rejectionReason ? "Verification Failed" :
+                                isContributionDetected && !confirmedContribution ? "Contributor Verification" :
+                                    !scanned ? "Step 1: Enter your GitHub URL to start." :
+                                        !claimsReviewed ? "Step 2: Detect & Confirm Stack." :
+                                            "Step 3: Confirm features to verify."}
                     </DialogDescription>
                 </DialogHeader>
 
-                {rejectionReason ? (
+                {isAuditing ? (
+                    // PROGRESS VIEW
+                    <div className="py-6 space-y-6">
+                        <div className="space-y-4 px-4">
+                            {PROGRESS_STEPS.map((step, index) => {
+                                const isCompleted = index < currentStep
+                                const isCurrent = index === currentStep
+
+                                return (
+                                    <div key={index} className="flex items-center gap-3">
+                                        {isCompleted ? (
+                                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                        ) : isCurrent ? (
+                                            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                                        ) : (
+                                            <Circle className="w-5 h-5 text-muted-foreground/30" />
+                                        )}
+                                        <span className={`text-sm ${isCurrent ? "font-semibold text-foreground" : isCompleted ? "text-muted-foreground" : "text-muted-foreground/50"}`}>
+                                            {step}
+                                            {isCurrent && index === 2 && <span className="block text-xs font-normal text-muted-foreground mt-0.5">Fetching latest source files (ignoring assets)...</span>}
+                                        </span>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <p className="text-xs text-center text-muted-foreground/60 pt-4">
+                            You can close this window. The audit will continue in the background.
+                        </p>
+                    </div>
+                ) : rejectionReason ? (
                     // REJECTION VIEW
                     <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -217,13 +292,13 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 <strong>Reason: Authorship &lt; 15%</strong>
                             </p>
                             <p className="text-xs text-muted-foreground px-8">
-                                To prevent fraud, DevProof requires you to be a primary contributor. If this is a team project, ensure you have committed significant code with your GitHub email.
+                                To prevent fraud, DevProof requires you to be a primary contributor.
                             </p>
                         </div>
                         {rejectionReason === "ContactUs" && (
                             <div className="bg-blue-50 p-4 rounded-md text-sm text-blue-700 mt-2 mx-8 text-center flex items-center gap-2">
                                 <AlertTriangle className="w-4 h-4" />
-                                Please contact our support team to verify your relationship with this project.
+                                Please contact support to verify your relationship with this project.
                             </div>
                         )}
                     </div>
@@ -239,7 +314,7 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 disabled={loading}
                             />
                             <p className="text-[11px] text-muted-foreground">
-                                💡 Tip: We analyze your <strong>README</strong> to find technical claims. Make sure it mentions your key features!
+                                💡 Tip: We analyze your <strong>README</strong> to find technical claims.
                             </p>
                         </div>
                     </div>
@@ -250,13 +325,10 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                             <ShieldCheck className="w-8 h-8 text-cyan-600" />
                         </div>
                         <div className="space-y-2">
-                            <h3 className="font-bold text-lg">Contribution Detected</h3>
+                            <h3 className="font-bold text-lg">External Repository Detected</h3>
                             <p className="text-sm text-muted-foreground px-4">
                                 This repository belongs to someone else. <br />
                                 <strong>Are you a contributor to this project?</strong>
-                            </p>
-                            <p className="text-xs text-muted-foreground px-8 pt-2">
-                                We will verify <strong>YOUR</strong> specific code contributions using your GitHub handle <strong>{defaultGithubUsername}</strong>.
                             </p>
                         </div>
                         <div className="flex flex-col w-full gap-2 px-8">
@@ -277,23 +349,18 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 Stack Detected
                             </h4>
                             <div className="flex flex-wrap gap-2 mb-2">
-                                {/* Stack Badges */}
                                 {scanResult?.stack?.languages?.map((l: string) => <Badge key={l} variant="outline">{l}</Badge>)}
-                                {scanResult?.stack?.frameworks?.map((f: string) => <Badge key={f} className="bg-blue-100 text-blue-800">{f}</Badge>)}
+                                {scanResult?.stack?.frameworks?.map((f: string) => <Badge key={f} className="bg-blue-100 text-blue-800 hover:bg-blue-100">{f}</Badge>)}
                             </div>
                         </div>
 
-                        {/* Archetype Editor */}
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm font-medium">Project Archetype (Auto-Detected)</label>
+                            <label className="text-sm font-medium">Project Archetype</label>
                             <Input
                                 value={projectType}
                                 onChange={(e) => setProjectType(e.target.value)}
                                 className="font-semibold border-amber-200 bg-amber-50 focus:bg-white transition-colors"
                             />
-                            <p className="text-[11px] text-muted-foreground">
-                                * This determines the specific Judging Rubric used for your score. Ensure it describes your project accurately.
-                            </p>
                         </div>
                     </div>
                 ) : (
@@ -307,7 +374,7 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
 
                         <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
                             {extractedClaims.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4">No specific claims found in README.</p>
+                                <p className="text-sm text-muted-foreground text-center py-4">No specific claims found.</p>
                             ) : (
                                 extractedClaims.map((claim, i) => (
                                     <div key={i} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded cursor-pointer" onClick={() => handleToggleClaim(claim)}>
@@ -319,40 +386,43 @@ export function AddProjectModal({ userId, defaultGithubUsername }: { userId?: st
                                 ))
                             )}
                         </div>
-                        <p className="text-xs text-muted-foreground">Only verified features will appear on your profile.</p>
-                    </div>
-                )}
-
-                {loading && (
-                    <div className="flex flex-col items-center justify-center p-4 gap-2">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                        <p className="text-sm font-medium animate-pulse">{statusText}</p>
                     </div>
                 )}
 
                 <DialogFooter>
-                    {/* Navigation Buttons */}
-                    {rejectionReason ? (
+                    {isAuditing ? (
+                        null
+                    ) : rejectionReason ? (
                         <Button onClick={handleReset} variant="destructive" className="w-full">
                             {rejectionReason === "ContactUs" ? "Close" : "Okay, I understand"}
                         </Button>
                     ) : isContributionDetected && !confirmedContribution ? (
-                        null // Buttons are in the special view
+                        null
                     ) : !scanned ? (
-                        <Button onClick={handleScan} disabled={loading || !url}>Scan Repository</Button>
+                        <Button onClick={handleScan} disabled={loading || !url}>
+                            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Scan Repository
+                        </Button>
                     ) : !claimsReviewed ? (
                         <div className="flex gap-2 w-full justify-end">
                             <Button variant="ghost" onClick={() => setScanned(false)} disabled={loading}>Back</Button>
-                            <Button onClick={handleProceedToClaims} disabled={loading}>Review Claims &rarr;</Button>
+                            <Button onClick={handleProceedToClaims} disabled={loading}>
+                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                Review Claims &rarr;
+                            </Button>
                         </div>
                     ) : (
                         <div className="flex gap-2 w-full justify-end">
                             <Button variant="ghost" onClick={() => setClaimsReviewed(false)} disabled={loading}>Back</Button>
-                            <Button onClick={handleConfirmImport} disabled={loading}>Confirm & Verify</Button>
+                            <Button onClick={handleConfirmImport} disabled={loading}>
+                                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                Confirm & Verify
+                            </Button>
                         </div>
                     )}
                 </DialogFooter>
             </DialogContent>
-        </Dialog >
+        </Dialog>
     )
 }
+
