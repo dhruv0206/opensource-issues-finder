@@ -56,6 +56,7 @@ class SearchResult(BaseModel):
     # New fields
     is_assigned: bool = False
     assignees_count: int = 0
+    has_claimer: bool = False
     repo_description: str | None = None
     repo_topics: list[str] = []
     repo_license: str | None = None

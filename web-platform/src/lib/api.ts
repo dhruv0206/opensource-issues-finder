@@ -21,6 +21,7 @@ export interface SearchResult {
   score: number;
   is_assigned?: boolean;
   assignees_count?: number;
+  has_claimer?: boolean;
   repo_description?: string | null;
   repo_topics?: string[];
   repo_license?: string | null;

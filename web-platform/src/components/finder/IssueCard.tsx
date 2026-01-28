@@ -1,10 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { StarIcon, ChatBubbleLeftIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { StarIcon, ChatBubbleLeftIcon, ArrowTopRightOnSquareIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { StartWorkingButton } from '@/components/finder/StartWorkingButton';
 import { SearchResult } from '@/lib/api';
 
@@ -127,11 +128,24 @@ export function IssueCard({ issue, index, userId }: IssueCardProps) {
                     )}
 
                     {/* Footer */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                            <ChatBubbleLeftIcon className="h-4 w-4" />
-                            {issue.comments_count} comments
-                        </span>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <span className="flex items-center gap-1 cursor-help">
+                                    {issue.has_claimer && (!issue.assignees_count || issue.assignees_count === 0) && (
+                                        <ExclamationTriangleIcon className="h-4 w-4 text-amber-500" />
+                                    )}
+                                    <ChatBubbleLeftIcon className="h-4 w-4" />
+                                    <span>{issue.comments_count}</span>
+                                </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>{issue.comments_count} comments</p>
+                                {issue.has_claimer && (!issue.assignees_count || issue.assignees_count === 0) && (
+                                    <p className="text-amber-500">Someone may already be working on this issue</p>
+                                )}
+                            </TooltipContent>
+                        </Tooltip>
                         <span>Created: {formatDate(issue.created_at)}</span>
                         <span>Updated: {formatDate(issue.updated_at)}</span>
                         <span className="ml-auto flex items-center gap-2">

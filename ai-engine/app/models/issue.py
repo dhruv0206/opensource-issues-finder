@@ -44,6 +44,9 @@ class IssueMetadata(BaseModel):
     
     # Ingestion metadata
     ingested_at: int = 0  # Unix timestamp
+
+    # Claim detection (analyze comments for "I'll work on this" patterns)
+    has_claimer: bool = False
     
     @computed_field
     @property

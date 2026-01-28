@@ -1,5 +1,6 @@
 """GitHub GraphQL API fetcher for efficient issue discovery."""
 
+import re
 import logging
 import time
 import jwt
@@ -47,8 +48,14 @@ query SearchIssues($query: String!, $cursor: String) {
             login
           }
         }
-        comments {
+        comments(first: 30) {
           totalCount
+          nodes {
+            body
+            author {
+              login
+            }
+          }
         }
         repository {
           name
@@ -230,7 +237,69 @@ class GraphQLFetcher:
             return self.token
         
         raise ValueError("No GitHub authentication available")
-    
+
+    def _analyze_comments_for_claimer(self, comments: list[dict]) -> bool:
+        """
+        Analyze comments to detect if someone claimed the issue.
+
+        Looks for patterns like:
+        - "I'll work on this", "I will work on this"
+        - "Can I take this?", "Can I work on it?"
+        - "I'll handle it", "I will handle it"
+        - "Assign me", "Please assign me"
+        - "Taking this", "Taking it"
+        - "I'm working on this", "Started working"
+        """
+        if not comments:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            if not body:
+                continue
+
+            # Skip bot comments
+            author = comment.get("author", {})
+            login = author.get("login", "") if author else ""
+            if login.endswith("[bot]") or "bot" in login.lower():
+                continue
+
+            body_lower = body.lower()
+
+            # Pattern 1: "I'll work on this" / "I will work on this" / "I can take this"
+            if re.search(r"[iI]['\s]*(?:ll|will|can)\s+(?:work|handle|take)\s+(?:on\s+)?(?:this|it)", body_lower):
+                return True
+
+            # Pattern 2: "Can I take this?" / "Can I work on it?" / "I can take this"
+            if re.search(r"(?:can\s+i|i\s+can)\s+(?:work|handle|take)\s+(?:on\s+)?(?:this|it)\??", body_lower):
+                return True
+
+            # Pattern 3: "Please assign me" / "Assign me"
+            if re.search(r"(?:please\s+)?assign\s+(?:me|this\s+to\s+me)\b", body_lower):
+                return True
+
+            # Pattern 4: "I'm working on this" / "I'm taking this"
+            if re.search(r"[iI][']\s*(?:m|am)\s+(?:working|taking)\s+(?:on\s+)?(?:this|it)\b", body_lower):
+                return True
+
+            # Pattern 5: "Started working on this"
+            if re.search(r"started\s+(?:working|working\s+on)\s+(?:this|it)\b", body_lower):
+                return True
+
+            # Pattern 6: "Taking this" / "Taking it" / "Working on this" / "taking care of it"
+            if re.search(r"\b(?:taking|working)\s+(?:on\s+)?(?:this|it|care\s+of\s+it)\b", body_lower):
+                return True
+
+            # Pattern 7: "On it!" / "I'm on it"
+            if re.search(r"(?:^|\s)on\s+it\s*[!?.]*$", body_lower):
+                return True
+
+            # Pattern 8: "Begin working on this"
+            if re.search(r"\bbegin\s+(?:working|working\s+on)\s+(?:this|it)\b", body_lower):
+                return True
+
+        return False
+
     def _execute_query(self, query: str, variables: dict, retry_on_401: bool = True, raise_on_graphql_error: bool = True) -> dict:
         """
         Execute a GraphQL query with automatic token refresh and rate limit handling.
@@ -408,7 +477,12 @@ class GraphQLFetcher:
         labels_lower = [l.lower() for l in labels]
         assignees = [a["login"] for a in node["assignees"]["nodes"]]
         topics = [t["topic"]["name"] for t in repo["repositoryTopics"]["nodes"]]
-        
+
+        # Analyze comments for claim patterns
+        comments_data = node.get("comments", {})
+        comments_nodes = comments_data.get("nodes", []) if comments_data else []
+        has_claimer = self._analyze_comments_for_claimer(comments_nodes)
+
         return IssueMetadata(
             issue_id=hash(node["id"]),  # GraphQL returns string ID
             issue_number=node["number"],
@@ -435,6 +509,7 @@ class GraphQLFetcher:
             repo_open_issues_count=repo["openIssues"]["totalCount"],
             is_good_first_issue="good first issue" in labels_lower,
             is_help_wanted="help wanted" in labels_lower,
+            has_claimer=has_claimer,
         )
     
     def get_rate_limit_status(self) -> dict:
