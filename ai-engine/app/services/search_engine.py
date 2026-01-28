@@ -300,6 +300,7 @@ class SearchEngine:
             score=match["score"],
             is_assigned=metadata.get("is_assigned", False),
             assignees_count=metadata.get("assignees_count", 0),
+            has_claimer=metadata.get("has_claimer", False),
             repo_description=metadata.get("repo_description"),
             repo_topics=metadata.get("repo_topics", []),
             repo_license=metadata.get("repo_license")
