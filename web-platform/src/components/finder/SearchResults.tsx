@@ -5,6 +5,7 @@ import { SearchResult } from '@/lib/api';
 import { IssueCard } from './IssueCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface SearchResultsProps {
     results: SearchResult[];
@@ -41,19 +42,21 @@ export function SearchResults({ results, isLoading, userId }: SearchResultsProps
     }
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4"
-        >
-            <p className="text-sm text-muted-foreground mb-4">
-                Found {results.length} contribution opportunities
-            </p>
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                {results.map((issue, index) => (
-                    <IssueCard key={issue.issue_id} issue={issue} index={index} userId={userId} />
-                ))}
-            </div>
-        </motion.div>
+        <TooltipProvider>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+            >
+                <p className="text-sm text-muted-foreground mb-4">
+                    Found {results.length} contribution opportunities
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+                    {results.map((issue, index) => (
+                        <IssueCard key={issue.issue_id} issue={issue} index={index} userId={userId} />
+                    ))}
+                </div>
+            </motion.div>
+        </TooltipProvider>
     );
 }
